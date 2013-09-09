@@ -25,7 +25,13 @@
 ---
 ####效果如下:
 ![enter image description here][11]
+![enter image description here][12]
+![enter image description here][13]
+![enter image description here][14]
 
+####如果你下载的是单文件(无论大小)则会主动弹出提示框,你可以直接复制链接到下载器下载,也可以点击确定直接下载,如果您勾选的是多文件则会打包下载
+
+![enter image description here][15]
 ----
 ##2. 关于我们
 * 为了 **"自由，开源，共享"** 的精神
@@ -45,5 +51,9 @@
   [8]: http://ss-o.net/safari/extension/NinjaKit.safariextz
   [9]: http://userscripts.org/scripts/show/176807
   [10]: http://duoluohua.com/download/
-  [11]: http://duoluohua.com/myapp/script/dupanlink/images/demo.png
+  [11]: http://duoluohua.com/myapp/script/dupanlink/images/1.png
+  [12]: http://duoluohua.com/myapp/script/dupanlink/images/2.png
+  [13]: http://duoluohua.com/myapp/script/dupanlink/images/3.png
+  [14]: http://duoluohua.com/myapp/script/dupanlink/images/4.png
+  [15]: http://duoluohua.com/myapp/script/dupanlink/images/5.png
 
