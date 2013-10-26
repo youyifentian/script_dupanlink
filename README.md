@@ -50,10 +50,11 @@
   [7]: http://userscripts.org/images/browsers/safari.png
   [8]: http://ss-o.net/safari/extension/NinjaKit.safariextz
   [9]: http://userscripts.org/scripts/show/176807
-  [10]: http://duoluohua.com/download/
-  [11]: http://duoluohua.com/myapp/script/dupanlink/images/1.png
-  [12]: http://duoluohua.com/myapp/script/dupanlink/images/2.png
-  [13]: http://duoluohua.com/myapp/script/dupanlink/images/3.png
-  [14]: http://duoluohua.com/myapp/script/dupanlink/images/4.png
-  [15]: http://duoluohua.com/myapp/script/dupanlink/images/5.png
+  [10]: http://www.duoluohua.com/download/
+  [11]: http://img.duoluohua.com/appimg/script_dupanlink_options_1.png
+  [12]: http://img.duoluohua.com/appimg/script_dupanlink_options_2.png
+  [13]: http://img.duoluohua.com/appimg/script_dupanlink_options_3.png
+  [14]: http://img.duoluohua.com/appimg/script_dupanlink_options_4.png
+  [15]: http://img.duoluohua.com/appimg/script_dupanlink_options_5.png
+
 
