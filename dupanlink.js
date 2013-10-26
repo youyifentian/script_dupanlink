@@ -5,39 +5,39 @@
 // @namespace	http://userscripts.org/scripts/show/176807
 // @updateURL	https://userscripts.org/scripts/source/176807.meta.js
 // @downloadURL	https://userscripts.org/scripts/source/176807.user.js
-// @icon	http://duoluohua.com/myapp/script/dupanlink/images/icon_48.png
+// @icon	http://img.duoluohua.com/appimg/script_dupanlink_icon_48.png
 // @license	GPL version 3
 // @encoding	utf-8
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
 // @run-at	document-end
-// @version	2.0.2
+// @version	2.0.3
 // ==/UserScript==
 
 /*
  * === 说明 ===
  *@作者:有一份田
- *@官网:http://duoluohua.com/download/
+ *@官网:http://www.duoluohua.com/download/
  *@Email:youyifentian@gmail.com
  *@Git:http://git.oschina.net/youyifentian
  *@转载重用请保留此信息
- *@最后修改时间:2013.09.09
+ *@最后修改时间:2013.10.26
  *
  *
  * */
 
 
-var version="2.0.2";
+var version='2.0.3';
 
 (function(){
-	var icons=document.getElementsByClassName("icon-download");
+	var icons=document.getElementsByClassName('icon-download');
 	if(!icons.length)return;
 	var msg=[
-		"\u54b1\u80fd\u4e0d\u4e8c\u4e48\x2E\x2E\x2E",
-		"\u5c3c\u739b\u4f60\u4e00\u4e2a\u6587\u4ef6\u90fd\u4e0d\u9009\u4f60\u4e0b\u4e2a\u6bdb\u7ebf\u554a\x2E\x2E\x2E",
-		"\u4f60\x54\x4D\u77e5\u9053\u4f60\u9009\u4e86\x31\x30\x30\u591a\u4e2a\u6587\u4ef6\u5417\x3F\u60f3\u7d2f\u6b7b\u6211\u554a\x2E\x2E\x2E",
-		"\u8bf7\u7a0d\u540e\uff0c\u8bf7\u6c42\u5df2\u53d1\u9001\uff0c\u670d\u52a1\u5668\u6b63\u5728\u4e3a\u60a8\u51c6\u5907\u6570\u636e\x2E\x2E\x2E",
-		"\u60a8\u53ef\u4ee5\u9009\u62e9\u5c06\u8be5\u94fe\u63a5\u590d\u5236\u5230\u4e0b\u8f7d\u5668\u4e2d\u4e0b\u8f7d\n\n\u6216\u8005\u70b9\u51fb\x20\u786e\u5b9a\x20\u7acb\u5373\u5f00\u59cb\u6d4f\u89c8\u5668\u4e0b\u8f7d\n\u53d6\u6d88\u8bf7\u70b9\x20\u5426\n\n"
+		'\u54b1\u80fd\u4e0d\u4e8c\u4e48\x2E\x2E\x2E',
+		'\u5c3c\u739b\u4f60\u4e00\u4e2a\u6587\u4ef6\u90fd\u4e0d\u9009\u4f60\u4e0b\u4e2a\u6bdb\u7ebf\u554a\x2E\x2E\x2E',
+		'\u4f60\x54\x4D\u77e5\u9053\u4f60\u9009\u4e86\x31\x30\x30\u591a\u4e2a\u6587\u4ef6\u5417\x3F\u60f3\u7d2f\u6b7b\u6211\u554a\x2E\x2E\x2E',
+		'\u8bf7\u7a0d\u540e\uff0c\u8bf7\u6c42\u5df2\u53d1\u9001\uff0c\u670d\u52a1\u5668\u6b63\u5728\u4e3a\u60a8\u51c6\u5907\u6570\u636e\x2E\x2E\x2E',
+		'\u60a8\u53ef\u4ee5\u9009\u62e9\u5c06\u8be5\u94fe\u63a5\u590d\u5236\u5230\u4e0b\u8f7d\u5668\u4e2d\u4e0b\u8f7d\n\n\u6216\u8005\u70b9\u51fb\x20\u786e\u5b9a\x20\u7acb\u5373\u5f00\u59cb\u6d4f\u89c8\u5668\u4e0b\u8f7d\n\u53d6\u6d88\u8bf7\u70b9\x20\u5426\n\n'
 	],btnArr=[],index=0,downProxy=disk.util.DownloadProxy;
 
 	for(var i=0;i<icons.length;i++){
@@ -51,16 +51,16 @@ var version="2.0.2";
 		item.parentNode.insertBefore(o,item.nextSibling);
 	}
 	function createDom(){
-		var o=document.createElement("A");
-		o.href="javascript:void(0);";
-		o.className="new-dbtn";
+		var o=document.createElement('A');
+		o.href='javascript:void(0);';
+		o.className='new-dbtn';
 		o.innerHTML='<em class="icon-download"></em><b>\u52a9\u624b\u4e0b\u8f7d</b>';
 		return o;
 	}
 	function downManager(){
 		downProxy._warmupHTML();
-		var items=[],iframe=document.getElementById("pcsdownloadiframe");
-		iframe.src="javascript:;";
+		var items=[],iframe=document.getElementById('pcsdownloadiframe');
+		iframe.src='javascript:;';
 		if(disk.util.ViewShareUtils){
 			var data=disk.util.ViewShareUtils.viewShareData,obj=JSON.parse(data);
 			items.push(obj);
@@ -83,7 +83,7 @@ var version="2.0.2";
 			if(r.length>=url.length)iframe.src=url;
 		}else{
 			downProxy.prototype.setPackName(FileUtils.parseDirFromPath(items[0].path), !items[0].isdir);
-			var form = document.forms.pcsdownloadform,action="",data=[],packName=downProxy.prototype._mPackName;
+			var form = document.forms.pcsdownloadform,action='',data=[],packName=downProxy.prototype._mPackName;
 			for (var i = 0; i < len; i++) {
 	                    if (isOther) {
 	                        data.push(items[i].fs_id);
@@ -94,7 +94,7 @@ var version="2.0.2";
 	                    }
 	                }
 			if(isOther){
-				action = disk.api.RestAPI.MULTI_DOWNLOAD_PUBLIC + "&uk=" + FileUtils.sysUK + downProxy.prototype._resolveExtraInfo();
+				action = disk.api.RestAPI.MULTI_DOWNLOAD_PUBLIC + '&uk=' + FileUtils.sysUK + downProxy.prototype._resolveExtraInfo();
 				data=data;
 			}else{
 				action = disk.api.RestAPI.MULTI_DOWNLOAD;
@@ -154,8 +154,8 @@ var version="2.0.2";
 })();
 function loadJs(js){
 	var oHead=document.getElementsByTagName('HEAD')[0],
-	    oScript= document.createElement("script"); 
-	oScript.type = "text/javascript"; 
+	    oScript= document.createElement('script'); 
+	oScript.type = 'text/javascript'; 
 	oScript.text =js;
 	oHead.appendChild( oScript); 	
 }
