@@ -27,11 +27,7 @@
 ![enter image description here][11]
 ![enter image description here][12]
 ![enter image description here][13]
-![enter image description here][14]
 
-####如果你下载的是单文件(无论大小)则会主动弹出提示框,你可以直接复制链接到下载器下载,也可以点击确定直接下载,如果您勾选的是多文件则会打包下载
-
-![enter image description here][15]
 ----
 ##2. 关于我们
 * 为了 **"自由，开源，共享"** 的精神
@@ -54,7 +50,5 @@
   [11]: http://img.duoluohua.com/appimg/script_dupanlink_options_1.png
   [12]: http://img.duoluohua.com/appimg/script_dupanlink_options_2.png
   [13]: http://img.duoluohua.com/appimg/script_dupanlink_options_3.png
-  [14]: http://img.duoluohua.com/appimg/script_dupanlink_options_4.png
-  [15]: http://img.duoluohua.com/appimg/script_dupanlink_options_5.png
 
 
