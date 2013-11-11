@@ -9,12 +9,12 @@
 // @license	GPL version 3
 // @encoding	utf-8
 // @date 	26/08/2013
-// @modified	08/11/2013
+// @modified	11/11/2013
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
 // @grant       GM_xmlhttpRequest
 // @run-at	document-end
-// @version	2.1.1
+// @version	2.1.4
 // ==/UserScript==
 
 /*
@@ -29,7 +29,7 @@
  * */
 
 
-var VERSION='2.1.1';
+var VERSION='2.1.4';
 var APPNAME='百度网盘助手';
 var t=new Date().getTime();
 
@@ -41,8 +41,8 @@ var t=new Date().getTime();
 	FileUtils=unsafeWindow.FileUtils;
 	Page=unsafeWindow.Page;
 	Utilities=unsafeWindow.Utilities;
-	var isShareManagerMode=Page.inViewMode(Page.VIEW_SHARE_PROPERTY_OWN),
-	downProxy=disk.util.DownloadProxy,index=0,
+	var isShareManagerMode=Page.inViewMode(Page.VIEW_SHARE_PROPERTY_OWN),copywindow=null,
+	downProxy=disk.util.DownloadProxy,viewShare=disk.util.ViewShareUtils || null,index=0,shareData=null,
 	btnArr=(function(){
 		var node=document.createElement('div');
 		node.id='helpermenubox';
@@ -57,6 +57,7 @@ var t=new Date().getTime();
 		"limit":3,
 		"msg":"",
 		"hostindex":0,
+		"prot":0,
 		"sharelink":"",
 		"ad":"",
 		"linklist":[]
@@ -92,8 +93,14 @@ var t=new Date().getTime();
 		'请求已暂停,您可以尝试其他操作...',//27
 		'<b>生成外链</b>',//28
 		'<b>暂停请求</b>',//29
+		'数据请求失败,请稍后重试',//30
+		'请选择合适的通道',//31
+		'<font color="red">解析失败,请核对链接是否有效</font>',//32
+		'外链解析已完成,<font color="red">部分解析失败</font>',//33
+		'是否复制文件名？',//34
 		''
 	];
+	getdownloadfile();
 	queryHost();
 	checkUpdate();
 	for(var i=0;i<btnArr.length;i++){
@@ -117,6 +124,7 @@ var t=new Date().getTime();
 	helperMenuList.find('a.fuckfirefox').click(menuFun);
 	helperMenuList.find('a.killfirefox')[0].onclick=menuFun;
 	//firefox---->GM_xmlhttpRequest--->end
+	//helperMenuBtn.click(function(){downManager(0);helperMenuList.hide();});
 	helperMenuBtn.mouseenter(function(){
 	    $(this).addClass('b-img-over');
 	    helperMenuList.children('ul').css('width', $(this).children('a').outerWidth()-3);
@@ -136,7 +144,7 @@ var t=new Date().getTime();
         });
 	function downManager(type){
 		if(2==type){
-			return makeOpenLinks();
+			return setGetLinkDialog();
 		}
 		if(isShareManagerMode){
 			myAlert(msg[10]);
@@ -145,8 +153,8 @@ var t=new Date().getTime();
 		downProxy._warmupHTML();
 		var items=[],iframe=$('#pcsdownloadiframe')[0];
 		iframe.src='javascript:;';
-		if(disk.util.ViewShareUtils){
-			var data=disk.util.ViewShareUtils.viewShareData,obj=JSON.parse(data);
+		if(viewShare){
+			var data=viewShare.viewShareData,obj=JSON.parse(data);
 			items.push(obj);
 		}else{
 			items=FileUtils.getListViewCheckedItems();
@@ -163,12 +171,17 @@ var t=new Date().getTime();
 		var isOneFile=(len==1 && items[0].isdir==0),isOther=Page.inViewMode(Page.VIEW_PROPERTY_OTHER),r=null;
 		if(isOneFile){
 			var url=items[0].dlink;
-			if(1==type){
-				var r=prompt(msg[4],url) || '';
-				if(r.length>=url.length)iframe.src=url;
-			}else{
-				iframe.src=url;
-			}
+				if (url) {
+					if(1==type){
+						var r=prompt(msg[4],url) || '';
+						if(r.length>=url.length)iframe.src=url;
+					}else{
+						iframe.src=url;
+					}
+				}else{
+					getdownloadfile(iframe,type);
+				}
+				
 		}else{
 			if(1==type){
 				return myAlert(msg[5]);
@@ -212,6 +225,44 @@ var t=new Date().getTime();
 			if(!type)alert(msg);
 		}
 	}
+	function getdownloadfile(iframe,type){
+		if(viewShare){
+			var data=viewShare.viewShareData,obj=JSON.parse(data),
+			url='http://pan.baidu.com/share/download?bdstoken='+viewShare.bdstoken+'&uk='+FileUtils.share_uk+'&shareid='+FileUtils.share_id+'&fid_list='+encodeURIComponent('['+obj.fs_id+']');
+			GM_xmlhttpRequest({
+				method: 'GET',
+				url: url,
+				onload: function(response){
+					//alert(response.responseText);
+					var resdata=JSON.parse(response.responseText),dlink=resdata.dlink,status=resdata.errno;
+					obj.dlink=dlink;
+					viewShare.viewShareData=JSON.stringify(obj);
+					if (status===0 && iframe){
+						if(1==type){
+							var r=prompt(msg[4],url) || '';
+							if(r.length>=url.length)iframe.src=url;
+						}else{
+							iframe.src=url;
+						}
+					}else if(iframe){
+						myAlert(msg[30]);
+					}
+				},
+				onerror: function(response){
+					if(iframe){
+						myAlert(msg[30]);
+					}
+				},
+				ontimeout: function(response){
+					if(iframe){
+						myAlert(msg[30]);
+					}
+				}
+			});
+			if(type)myAlert(msg[17]);
+		}
+		return;
+	}
 	function downloadCounter(C, B) {
 	        if (Page.inViewMode(Page.VIEW_PROPERTY_OTHER)) {
 	            var F = FileUtils.share_uk,
@@ -242,14 +293,12 @@ var t=new Date().getTime();
 	            });
 		}
 	}
-	function makeOpenLinks(){
+	function setGetLinkDialog(){
 		var canvas=disk.Context.canvas || new disk.ui.Canvas(),dialog=document.linkdialog || createDialogElement(canvas);
 		disk.Context.canvas=canvas;
 		document.linkdialog=dialog;
 		if(dialog.isVisible())return;
-		//alert(dialog._mUI.pane);
 		setHostSelect(dialog);
-		//queryHost(dialog);
 		if(!isShareManagerMode)canvas.setVisible(true);
 		dialog.setVisible(true);
 		setDialogCenter(dialog);
@@ -257,13 +306,13 @@ var t=new Date().getTime();
 	}
 	function createDialogElement(canvas){
 		var o= document.createElement('div'),html='';
-		html+='<div class="dlg-hd b-rlv"><span title="关闭"id="openlinkdialogclose"class="dlg-cnr dlg-cnr-r"></span><h3>生成外链</h3></div><div class="download-mgr-dialog-msg center"id="openlinkloading">加载中&hellip;</div><div id="openlinkbox"style="display:none;"><div class="dlg-bd clearfix"><div><div style="padding:10px;font-size:12px;"><dt style="padding:5px 10px 3px 0;"><b>外链服务器：</b><span style="float:right;margin-top:-5px;"><a href="'+getApiUrl('sharelinkhost')+'"target="_blank"style="text-decoration:underline;">添加外链服务器</a></span></dt><div class="clearfix"><select style="font-size:19px;width:200px;border:1px solid #BBD4EF;"name="openlinkhost"id="openlinkhost"></select><span>&nbsp;&nbsp;&nbsp;&nbsp;直接访问:&nbsp;&nbsp;<a href="javascript:;"target="_blank"style="text-decoration:underline;">点此</a></span></div><dt style="padding:5px 10px 3px 0;"><b>文件分享链接：</b><span>&nbsp;&nbsp;<a href="javascript:;"id="getlocallink"style="text-decoration:underline;">使用当前地址</a></span><span style="float:right;"><a href="javascript:;"id="clearsharelink"style="text-decoration:underline;"title="清空所有">清空</a>&nbsp;&nbsp;&nbsp;&nbsp;</span></dt><div class="clearfix"><input type="text"name="sharelinkbox"id="sharelinkbox"maxlength="1024"style="width:540px;border:1px solid #BBD4EF;height:24px;line-height:24px;padding:2px;"></div></div><div id="openlinkresult"></div></div></div><br><div class="dlg-ft b-rlv"><div class="clearfix right"><span style="margin-top:13px;margin-right:5px;color:green;"id="openlinktipmsg"></span><a href="javascript:;"class="sbtn okay"><b>生成外链</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div>';
+		html+='<div class="dlg-hd b-rlv"><span title="关闭"id="openlinkdialogclose"class="dlg-cnr dlg-cnr-r"></span><h3>生成外链</h3></div><div class="download-mgr-dialog-msg center"id="openlinkloading">加载中&hellip;</div><div id="openlinkbox"style="display:none;"><div class="dlg-bd clearfix"><div><div style="padding:10px;font-size:12px;"><dt style="padding:5px 10px 3px 0;"><b>外链服务器：</b><span><input type="radio" name="prot" id="prot_1" style="top:2px;position:relative;"><label for="prot_1">&nbsp;通道1</label>&nbsp;&nbsp;<input type="radio" name="prot" id="prot_2" style="top:2px;position:relative;"><label for="prot_2">&nbsp;通道2</label></span><span style="float:right;margin-top:-5px;"><a href="'+getApiUrl('sharelinkhost')+'"target="_blank"style="text-decoration:underline;">添加外链服务器</a></span></dt><div class="clearfix"><select style="font-size:19px;width:200px;border:1px solid #BBD4EF;"name="openlinkhost"id="openlinkhost"></select><span style="overflow:hidden;">&nbsp;&nbsp;&nbsp;&nbsp;直接访问:&nbsp;&nbsp;<a href="javascript:;"target="_blank"style="text-decoration:underline;">点此</a></span></div><dt style="padding:5px 10px 3px 0;"><b>文件分享链接：</b><span>&nbsp;&nbsp;<a href="javascript:;"id="getlocallink"style="text-decoration:underline;">使用当前地址</a></span><span style="float:right;"><a href="javascript:;"id="clearsharelink"style="text-decoration:underline;"title="清空所有">清空</a>&nbsp;&nbsp;&nbsp;&nbsp;</span></dt><div class="clearfix"><input type="text"name="sharelinkbox"id="sharelinkbox"maxlength="1024"style="width:540px;border:1px solid #BBD4EF;height:24px;line-height:24px;padding:2px;"></div></div><div id="openlinkresult"></div></div></div><br><div class="dlg-ft b-rlv"><div class="clearfix right"><span style="margin-top:13px;margin-right:5px;color:green;"id="openlinktipmsg"></span><a href="javascript:;"class="sbtn okay"><b>生成外链</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div>';
 		o.className = "b-panel b-dialog download-mgr-dialog download-mgr-dialog-m0 helperopenlink";
 		o.innerHTML = html;
 		o.pane=o;
 		document.body.appendChild(o);
-		var dialog= new disk.ui.Panel(o),linkloading=$(o).find('#openlinkloading')[0],
-		    linkbox=$(o).find('#openlinkbox')[0],hostSelect=$(o).find('#openlinkhost')[0],
+		var dialog= new disk.ui.Panel(o),linkloading=$(o).find('#openlinkloading')[0],prot_1=$(o).find(':radio')[0],
+		    linkbox=$(o).find('#openlinkbox')[0],hostSelect=$(o).find('#openlinkhost')[0],prot_2=$(o).find(':radio')[1],
 		    openhost=$(o).find('#openlinkhost').siblings('span').find('a')[0],locallink=$('#getlocallink')[0],
 		    sharelinkbox=$(o).find('#sharelinkbox')[0],linkresult=$(o).find('#openlinkresult')[0],startQueryBtn=$(o).find('.sbtn')[0],
 		    dialogClose=function(){
@@ -275,12 +324,22 @@ var t=new Date().getTime();
 		dialog.linkload=linkloading;
 		dialog.linkbox=linkbox;
 		dialog.hostselect=hostSelect;
+		dialog.prot_1=prot_1;
+		dialog.prot_2=prot_2;
 		dialog.sharelinkbox=sharelinkbox;
 		dialog.linkresult=linkresult;
 		dialog.startBtn=startQueryBtn;
 		dialog.isload=false;
 		dialog.isQueryLink=false;
 		locallink.style.display=/^(http|https):\/\/pan.baidu.com\/disk*\/home*\/*$/.test(location.href) ? 'none' : '';
+		$(o).find(':radio').click(function(){
+			var hostlit=hostconfig.hostlist[this.id];
+			dialog.hostselect.innerHTML='';
+			this.checked=true===initSelect(dialog,hostlit);
+			if(this.checked && hostlit.msg==''){
+				dialog.hostselect.onchange(true);
+			}
+		});
 		$('#getlocallink').click(function(){
 			getLocalLink(dialog);
 		});
@@ -305,27 +364,51 @@ var t=new Date().getTime();
 		};
 		return dialog;
 	}
+	function initSelect(dialog,hostlist){
+		var html='',status=hostlist.status,msgtext=hostlist.msg,list=hostlist.list,
+		hostselect=dialog.hostselect,openhost=hostselect.openhost;
+		if(status!=0){
+			showTipMsg(msgtext,1);
+			return false;
+		}
+		for(var i=0;i<list.length;i++){
+			var hostItem=list[i];
+			html+='<option '+(i==0 ? 'selected="selected"' : '')+'value="'+hostItem.key+'" title="'+hostItem.title+'">'+hostItem.showname+'</option>'; 
+		}
+		hostItem=list[0];
+		hostselect.innerHTML=html;
+		openhost.href=hostItem.showurl;
+		openhost.title=hostItem.showurl;
+		openhost.innerHTML='点此('+hostItem.title+')';
+		hostselect.onchange=function(type){
+			var hostItem=list[this.selectedIndex];
+			openhost.href=hostItem.showurl;
+			openhost.title=hostItem.showurl;
+			openhost.innerHTML='点此('+hostItem.title+')';
+			if(type && hostItem.des)showTipMsg(hostItem.des);
+		}
+		$(hostselect).find('option').click(function(){
+			hostselect.onchange(true);
+		});
+		if(msgtext)showTipMsg(msgtext);
+		return true;
+	}
 	function setHostSelect(dialog){
 		if(hostconfig){
 			if(!dialog || dialog.isload)return;
-			var status=hostconfig.status,msgtext=hostconfig.msg,hostlist=hostconfig.hostlist,
-			html='',hostselect=dialog.hostselect,openhost=hostselect.openhost;
+			var status=hostconfig.status,msgtext=hostconfig.msg,
+			hostlist=hostconfig.hostlist,js=hostconfig.js;
+			if(js){
+				try{eval(js);}catch(err){}
+			}
 			if(0===status){
-				for(var i=0;i<hostlist.length;i++){
-					var hostItem=hostlist[i];
-					html+='<option '+(i==0 ? 'selected="selected"' : '')+'value="'+hostItem.key+'" title="'+hostItem.title+'">'+hostItem.showname+'</option>'; 
-				}
-				hostItem=hostlist[0];
-				hostselect.innerHTML=html;
-				openhost.href=hostItem.showurl;
-				openhost.title=hostItem.showurl;
-				openhost.innerHTML='点此('+hostItem.title+')';
-				hostselect.onchange=function(type){
-					var hostItem=hostlist[this.selectedIndex];
-					openhost.href=hostItem.showurl;
-					openhost.title=hostItem.showurl;
-					openhost.innerHTML='点此('+hostItem.title+')';
-					if(type && hostItem.des)showTipMsg(hostItem.des);
+				var prot_1HostList=hostlist.prot_1,prot_2HostList=hostlist.prot_2;
+				if(prot_1HostList.status===0){
+					initSelect(dialog,prot_1HostList);
+					dialog.prot_1.checked=true;
+				}else if(prot_2HostList.status===0){
+					initSelect(dialog,prot_2HostList);
+					dialog.prot_2.checked=true;
 				}
 				dialog.linkload.style.display="none";
 				dialog.linkbox.style.display="";
@@ -342,19 +425,31 @@ var t=new Date().getTime();
 		setDialogCenter(dialog);
 	}
 	function queryHost(dialog){
-		var url=getApiUrl('gethost');
+		var url=getApiUrl('gethost')+'&cachetoken='+hostCache();
 		GM_xmlhttpRequest({
 			method: 'GET',
 			url: url,
 			onload: function(response){
 				//alert(response.responseText);
 				try{
-					hostconfig=JSON.parse(response.responseText);
+					var hostjson=response.responseText,obj=JSON.parse(hostjson);
+					//console.log(url);
+					//console.log(hostjson);
+					if(0===obj.cache.status){
+						hostconfig=obj;
+						hostCache(1,hostjson);
+					}else if(1===obj.cache.status){
+						hostconfig=hostCache(1);
+					}else{
+						hostconfig=obj;
+						hostCache(1,1);
+					}
 					if(dialog){
 						setHostSelect(dialog);
 					}
 				}catch(err){
 					if(dialog)queryHostErr(dialog,msg[9]);
+					hostconfig=null;
 				}
 			},
 			onerror: function(response){
@@ -364,6 +459,26 @@ var t=new Date().getTime();
 				queryHostErr(dialog,msg[8]);
 			}
 		});
+	}
+	function hostCache(type,hostjson){
+		if(type){
+			if(hostjson){
+				localStorage['hostconfigcache']=hostjson;
+			}else{
+				return JSON.parse(localStorage['hostconfigcache']);
+			}
+			return;
+		}
+		var cache=localStorage['hostconfigcache'],obj=null,cachetoken='';
+		try{
+			if(cache){
+				obj=JSON.parse(cache);
+				if(0===obj.status){
+					cachetoken=obj.cache.cachetoken;
+				}
+			}
+		}catch(err){localStorage['hostconfigcache']=undefined}
+		return cachetoken;
 	}
 	function queryHostErr(dialog,msgtext){
 		if(!dialog)return;
@@ -375,32 +490,52 @@ var t=new Date().getTime();
 		setDialogCenter(dialog);
 	}
 	function startQueryLink(dialog){
+		var sharelink=dialog.sharelinkbox.value,hostselect=dialog.hostselect,
+		    linkhost=hostselect.value,prot=dialog.prot_1.checked ? 1 : dialog.prot_2.checked ? 2 : 0,
+		    hostindex=hostselect.selectedIndex;
 		if(dialog.isQueryLink){
 			dialog.startBtn.innerHTML=msg[28];
 			dialog.isQueryLink=false;
-			queryLinkHwnd.abort();
+			locakBtn(dialog,false);
+			try{
+				if(1==prot){
+					queryLinkHwnd.stopQuery();
+					queryLinkHwnd.onFinish=emptyFun;
+		    			queryLinkHwnd.onQuery=emptyFun;
+				}else if(2==prot){
+					queryLinkHwnd.abort();
+				}
+			}catch(err){}
 			showTipMsg(msg[27]);
+			dialog.linkresult.innerHTML='';
 			return;
 		}
-		var sharelink=dialog.sharelinkbox.value,hostselect=dialog.hostselect,
-		    linkhost=hostselect.value,hostindex=hostselect.selectedIndex;
 		if(!linkhost){
 			showTipMsg(msg[26]);
+			return;
+		}else if(!prot){
+			showTipMsg(msg[31]);
 			return;
 		}
 		if(isUrl(sharelink)){
 			dialog.linkresult.innerHTML='';
 			showTipMsg(msg[12],1);
 			setDialogCenter(dialog);
-			queryLink(dialog,sharelink,linkhost,hostindex);
+			locakBtn(dialog,true);
+			if(prot===2){
+				queryLink(dialog,sharelink,linkhost,hostindex,prot);
+			}else{
+				localQueryLink(dialog,sharelink,linkhost,hostindex,prot);
+			}
 		}else{
 			showTipMsg(msg[sharelink.length ? 11 : 25]);
 			dialog.sharelinkbox.focus();
 		}
 	}
-	function queryLink(dialog,sharelink,linkhost,hostindex){
-		var hostlist=hostconfig.hostlist[hostindex],url=hostlist.queryhost || getApiUrl('getlink'),token=hostlist.token || '',hostdata=hostlist.hostdata || '',
-		    data='sharelink='+encodeURIComponent(sharelink)+'&linkhost='+encodeURIComponent(linkhost)+'&token='+encodeURIComponent(token)+'&'+hostdata;
+	function queryLink(dialog,sharelink,linkhost,hostindex,prot){
+		var hostlist=hostconfig.hostlist['prot_'+prot].list[hostindex],url=hostlist.queryhost || getApiUrl('getlink'),
+		    token=hostlist.token || '',hostdata=hostlist.hostdata || '',
+		    data='sharelink='+encodeURIComponent(sharelink)+'&linkhost='+linkhost+'&prot='+prot+'&token='+token+'&'+hostdata;
 		dialog.isQueryLink=true;
 		queryLinkHwnd=GM_xmlhttpRequest({
 			method: 'POST',
@@ -418,11 +553,12 @@ var t=new Date().getTime();
 						linkCache.total=linklist.length;
 						linkCache.linklist=linklist;
 						linkCache.index=0;
+						linkCache.prot=prot;
 						linkCache.sharelink=sharelink;
 						linkCache.hostindex=hostindex;
 						showResultLink(dialog);
 					}else{
-						queryLinkErr(dialog,resLink.msg);
+						queryLinkErr(dialog,resLink.msg || msg[14]);
 					}
 				}catch(err){
 					queryLinkErr(dialog,msg[14]);
@@ -437,9 +573,30 @@ var t=new Date().getTime();
 		});
 		dialog.startBtn.innerHTML=msg[29];
 	}
+	function localQueryLink(dialog,sharelink,linkhost,hostindex,prot){
+		dialog.isQueryLink=true;
+		queryLinkHwnd= new queryLinkClass(sharelink);
+		queryLinkHwnd.startQuery(
+				sharelink,
+				function(opt){
+					setResultLocalQuery(opt,dialog,sharelink,linkhost,hostindex,prot);
+				},
+				function(o,msg){
+					var html='';
+					html+='<div style="padding:10px;font-size:12px;margin-top:-23px;overflow:hidden;">';
+					html+='<dt style="padding:5px 10px 3px 0;overflow:hidden;">';
+					html+='<span style="width:5350px;height:16px;overflow:hidden;display:inline-block;">';
+					html+='<b>状态：</b>'+msg[o.errno]+'-->'+decodeURIComponent(o.err)+'</span>';
+					html+='</dt></div>';
+					dialog.linkresult.innerHTML=queryLinkHwnd.isBegin ? html : '';
+				}
+				);
+		dialog.startBtn.innerHTML=msg[29];
+	}
 	function queryLinkErr(dialog,msgtext){
 		dialog.isQueryLink=false;
 		dialog.startBtn.innerHTML=msg[28];
+		locakBtn(dialog,false);
 		showTipMsg(msgtext,1);
 	}
 	function getLocalLink(dialog){
@@ -467,15 +624,46 @@ var t=new Date().getTime();
 				index=20;
 			}
 		}else{
-			url=decodeURIComponent(location.href).replace(decodeURIComponent(location.hash),'');
+			url=location.href;
 		}
 		sharelinkbox.value=url;
 		reslinkbox.innerHTML='';
 		showTipMsg(msg[index]);
 		setDialogCenter(dialog);
 	}
+	function setResultLocalQuery(opt,dialog,sharelink,linkhost,hostindex,prot){
+		dialog.isQueryLink=false;
+		locakBtn(dialog,false);
+		dialog.startBtn.innerHTML=msg[28];
+		var hostlist=hostconfig.hostlist['prot_'+prot].list[hostindex],basehost=hostlist.queryhost,
+		    token=hostlist.token || '',hostdata=hostlist.hostdata || '',
+		    baseuri=(token ? 'token='+token+'&' : '')+hostdata,
+		    baseurl=basehost+'?'+(baseuri ? baseuri+'&' : '')+'fh='+linkhost,status=opt.status,
+		    filelist=opt.filelist,linklist=[];
+		if(13!=status && 33!=status){
+			showTipMsg(msg[status]);
+			return;
+		}
+		//console.log(opt);
+		for(var i=0;i<filelist.length;i++){
+			var file=filelist[i];
+			linklist.push({
+				"name":file.server_filename,
+				"url":baseurl+'&u='+opt.uk+'&i='+opt.id+'&f='+file.fs_id+'&n='+file.server_filename
+			});
+		}
+		linkCache.msg=msg[status];
+		linkCache.total=linklist.length;
+		linkCache.linklist=linklist;
+		linkCache.index=0;
+		linkCache.prot=prot;
+		linkCache.sharelink=sharelink;
+		linkCache.hostindex=hostindex;
+		showResultLink(dialog);
+	}
 	function showResultLink(dialog){
 		dialog.isQueryLink=false;
+		locakBtn(dialog,false);
 		dialog.startBtn.innerHTML=msg[28];
 		var linkbox=dialog.linkresult,html='',total=linkCache.total,limit=linkCache.limit,msgtext=linkCache.msg,
 		    list=linkCache.linklist,page=Math.ceil(total/limit),i=total>limit ? limit : total;
@@ -484,11 +672,12 @@ var t=new Date().getTime();
 		html+='<span style="float:right;">';
 		html+='<span id="reslinkpage">共:&nbsp;1/'+page+'&nbsp;页</span>,&nbsp;'+total+'&nbsp;条&nbsp;&nbsp;';
 		html+=page>1 ? '<a href="javascript:;"style="text-decoration:underline;"type="first">首页</a>&nbsp;&nbsp;&nbsp;<a href="javascript:;"style="text-decoration:underline;"type="next">下一页</a>&nbsp;&nbsp;&nbsp;<a href="javascript:;"style="text-decoration:underline;"type="prev">上一页</a>&nbsp;&nbsp;&nbsp;<a href="javascript:;"style="text-decoration:underline;"type="last">末页</a>' : '';
+		html+=page >1 ? '&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:;"style="text-decoration:underline;"title="复制所以外链"type="copylink">复制</a>' : '';
 		html+='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
 		html+='<a href="javascript:;"style="text-decoration:underline;"title="清空结果"type="clear">清空</a>&nbsp;&nbsp;&nbsp;&nbsp;</span>';
 		html+='</dt>';
 		for(var j=0;j<i;j++){
-			html+='<div class="clearfix"style="margin-top:4px;"><input type="text"class="resultlink"maxlength="1024"style="width:540px;border:1px solid #BBD4EF;height:24px;line-height:24px;padding:2px;"></div>';
+			html+='<div class="clearfix"style="margin-top:4px;overflow:hidden;"><div style="padding-left:10px;overflow:hidden;width:520px;height:20px;">&nbsp;</div><input type="text"class="resultlink"maxlength="1024"style="width:540px;border:1px solid #BBD4EF;height:24px;line-height:24px;padding:2px;"></div>';
 		}
 		html+=linkCache.ad;
 		html+='</div>';
@@ -499,13 +688,15 @@ var t=new Date().getTime();
 		linkCache.index=inputBox.length-1;
 		inputBox.mouseover(function(){this.select()});
 		for(var m=0;m<inputBox.length;m++){
-			inputBox[m].value=list[m];
+			inputBox[m].previousSibling.title=list[m]['name'] || '&nbsp;';
+			inputBox[m].previousSibling.innerHTML='<b>'+list[m]['name'] || '&nbsp;'+'</b>';
+			inputBox[m].value=list[m]['url'];
 		}
 		$(linkbox).find('a').click(function(){
 			linkResPageBar(dialog,linkbox,inputBox,page,$(this).attr('type'))
 		});
-		dialog.hostselect.options[linkCache.hostindex].selected=true;
-		dialog.hostselect.onchange();
+		//dialog.hostselect.options[linkCache.hostindex].selected=true;
+		//dialog.hostselect.onchange();
 		dialog.sharelinkbox.value=linkCache.sharelink;
 		setDialogCenter(dialog);
 		showTipMsg(msgtext || msg[13],msgtext);
@@ -516,6 +707,15 @@ var t=new Date().getTime();
 			setDialogCenter(dialog);
 			showTipMsg('');
 			dialog.sharelinkbox.focus();
+			return;
+		}else if('copylink'==type){
+			var copytext='',list=linkCache.linklist,r=confirm(msg[34]);
+			for(var i=0;i<list.length;i++){
+				copytext+=(r ? '<b>'+list[i]['name']+'</b><br>' : '')+list[i]['url']+'<br><br>';
+			}
+			if(copywindow){copywindow.close();}
+			copywindow=window.open('about:blank','mywin','width=900,left=50,top=50,scrollbars=1');
+			copywindow.document.write(copytext);
 			return;
 		}
 		var pagebox=box.pagebox,i=0,total=linkCache.total,pageindex=linkCache.pageindex,
@@ -537,12 +737,20 @@ var t=new Date().getTime();
 		pageindex=pageindex<1 ? 1 : pageindex >page ? page : pageindex;
 		i=(pageindex-1)*limit;
 		for(var j=0;j<limit;j++){
-			var m=i+j;
-			o[j].value=m<total ? list[m] : '';
+			var m=i+j,name=m<total ? list[m]['name'] : '&nbsp;',url=m<total ? list[m]['url'] : '';
+			o[j].previousSibling.title=name;
+			o[j].previousSibling.innerHTML='<b>'+name+'</b>';
+			o[j].value=url;
 		}
 		linkCache.index=m>=total ? total-1 : m;
 		linkCache.pageindex=pageindex;
 		pagebox.innerHTML='共:&nbsp;'+pageindex+'/'+page+'&nbsp;页';
+	}
+	function locakBtn(dialog,type){
+		type=type ? true : false;
+		dialog.hostselect.disabled=type;
+		dialog.prot_1.disabled=type;
+		dialog.prot_2.disabled=type;
 	}
 	function setDialogCenter(dialog){
 		dialog.setGravity(disk.ui.Panel.CENTER);
@@ -558,6 +766,222 @@ var t=new Date().getTime();
 			}, 5000);
 		}
 	}
+	var queryLinkClass=(function(){
+	    var _=function(url,callback){
+	        this.url=url;
+	        this.callback=callback;
+	        this.msg=[
+	            "解析成功",//0
+	            "正在解析",//1
+	            "解析错误",//2
+	            "解析超时",//3
+	            "请求出错",//4
+	            "无法直视",//5
+	            "无法解析,请检查链接",//6
+	            '解析完成',//7
+	            ''
+	        ];
+		this.regexp=hostconfig.regexp;
+	        this.init(url);
+	    };
+	    _.prototype={
+	        getuk:function(){
+	            //var regExp = new RegExp('share_uk\\=\\"(\\d*)\\"','ig'),execs = regExp.exec(this.html);
+		    var regconfig=this.regexp.uk,regExp = new RegExp(regconfig.tester,'ig'),
+		    execs = regExp.exec(this.html);
+	            if(execs){
+	              return execs[regconfig.index];
+		    }
+	           return;
+	        },
+	        getid:function(){
+		    var regconfig=this.regexp.id,regExp = new RegExp(regconfig.tester,'ig'),
+		    execs = regExp.exec(this.html);
+	            if(execs){
+	              return execs[regconfig.index];
+		    }	            
+	           return;
+	        },
+	        getpath:function(){
+	            var regconfig=this.regexp.path,regExp = new RegExp(regconfig.tester,'ig'),
+		    execs = regExp.exec(this.url);
+	            if(execs){
+	                return encodeUrl(execs[regconfig.index]);
+	            }
+	            return;
+	        },
+	        getInfo:function(){
+		    var regconfig=this.regexp.info,regExp = new RegExp(regconfig.tester,'ig'),
+		    execs = regExp.exec(this.html);
+		    //console.log(execs);
+	            if(execs){
+	                return JSON.parse(JSON.parse(execs[regconfig.index]));
+	            }
+	            return;	            
+	        },
+	        dealFileInfo:function(o,path){
+	            if(!this.isBegin){
+	                return;
+	            }
+	            var dirbox=[];
+	            if(isArray(o)){
+	                for(var i=0;i<o.length;i++){
+	                    var item=o[i];
+	                    if(1===parseInt(item.isdir)){
+	                        item.path=path || item.path;
+	                        dirbox.push(item);
+	                    }else{
+	                        this.filebox.push(item);
+	                    }
+	                }
+	            }else if(0===parseInt(o.isdir)){
+	                this.filebox.push(o);
+	            }else if(1===parseInt(o.isdir)){
+	                o.path=path || o.path;
+	                dirbox.push(o);
+	            }else{
+	                return;
+	            }
+	            //console.log(this.ajaxIndex+'--------'+this.ajaxCounter);
+	            if(dirbox.length){
+	                this.dealDirInfo(dirbox);
+	            }else{
+	                if(this.ajaxCounter===this.ajaxIndex){
+	                    this.status=13;
+	                    this.onFinish();
+	                }
+	            }
+	        },
+	        dealDirInfo:function(o){
+	            for(var i=0;i<o.length;i++){
+	                var item=o[i],
+	                url='http://pan.baidu.com/share/list?page=1&uk='+this.uk+'&shareid='+this.id+'&dir='+encodeUrl(item.path);
+	                this.ajaxCounter++;
+	                this.queryDir(url,item.path);
+	            }
+	        },
+	        queryDir:function(url,path){
+	            var _this=this;
+	            this.onQuery({"errno":1,"err":path});
+	            GM_xmlhttpRequest({
+	                method: 'GET',
+	                url: url,
+	                onload: function(response){
+	                    if(200!=response.status)return;
+	                    try{
+	                        var html=response.responseText,obj=JSON.parse(html);
+	                        _this.ajaxIndex++;
+	                        //console.log(obj);
+	                        //console.log(url);
+	                        if(parseInt(obj.errno)===0){
+	                            var list=obj.list;
+	                            _this.onQuery({"errno":0,"err":path});
+	                            _this.dealFileInfo(list);
+	                        }else{
+	                            //console.log(url);
+	                            _this.onError(2,path);
+	                        }
+	                    }catch(err){_this.onError(5,path);}
+	                },
+	                onerror:function(response){
+	                    _this.ajaxIndex++;
+	                    _this.onError(4,path);
+	                },
+	                ontimeout:function(response){
+	                    _this.ajaxIndex++;
+	                    _this.onError(3,path);
+	                }
+	            });
+	        },
+	        onError:function(errno,path){
+	            var error={"errno":errno,"err":path};
+	            this.error.push(error);
+	            if(this.ajaxCounter===this.ajaxIndex){
+	                this.onFinish();
+	            }else{
+	                this.onQuery(error);
+	            }
+	            if(this.onerrorFun)this.onerrorFun(errno,path,this.msg);
+	        },
+	        onQuery:function(o){
+	            if(this.onqueryFun)this.onqueryFun(o,this.msg);
+	            //console.log(this.msg[o.errno]+':'+decodeURIComponent(o.err));
+	        },
+	        onFinish:function(){
+	            if(!this.isBegin)return;
+	            this.isBegin=false;
+	            if(this.error.length)this.status==33;
+	            this.onQuery({"errno":7,"err":this.url});
+	            var res={
+	                "status":this.status,
+	                "msg":"",
+	                "uk":this.uk,
+	                "id":this.id,
+	                "filelist":this.filebox,
+	                "error":this.error,
+	            };
+	            //console.log('finish');
+	            //console.log(res);
+	            //console.log(this.filebox.length);
+	            if(this.callback)this.callback(res);
+	        },
+	        init:function(url,callback,onquery,onerror){
+	            this.url=url || this.url;
+	            this.callback=callback || this.callback;
+	            this.onqueryFun=onquery;
+	            this.onerrorFun=onerror;
+	            this.isBegin=false;
+	            this.uk='';
+	            this.id='';
+	            this.path='';
+	            this.html='';
+	            this.filebox=[];
+	            this.ajaxIndex=0;
+	            this.ajaxCounter=0;
+	            this.status=0;
+	            this.error=[];
+	        },
+	        startQuery:function(url,callback,onquery,onerror){
+	            this.init(url,callback,onquery,onerror);
+	            var _this=this,url=this.url;
+	            if(!url)return;
+	            this.isBegin=true;
+	            this.onQuery({"errno":1,"err":url});
+	            GM_xmlhttpRequest({
+	                method: 'GET',
+	                url: url,
+	                onload: function(response){
+	                    var html=response.responseText;
+	                    _this.html=html;
+	                    _this.uk=_this.getuk();
+	                    _this.id=_this.getid();
+	                    _this.path=_this.getpath();
+	                    var info=_this.getInfo();
+	                    
+	                    if(_this.uk && _this.id && info){
+	                        _this.onQuery({"errno":0,"err":url});
+	                        _this.dealFileInfo(info,_this.path);
+	                    }else{
+	                        _this.status=32;
+	                        _this.onError(6,url);
+	                    }
+	                },
+	                onerror: function(response){
+	                    _this.status=15;
+	                    _this.onError(4,url);
+	                },
+	                ontimeout: function(response){
+	                    _this.status=16;
+	                    _this.onError(3,url);
+	                }
+	            });
+	        },
+	        stopQuery:function() {
+	            this.isBegin=false;
+	        }
+	    };
+	    return _;
+	})();
 })();
 function checkUpdate(){
 	var js='var upinfo=document.getElementById("updateimg");';
@@ -567,12 +991,16 @@ function checkUpdate(){
 	js+='}';
 	loadJs(js);
 }
-
+var isArray = function(o){
+    return Object.prototype.toString.call(o) === '[object Array]';
+},emptyFun=function(){};
+function encodeUrl(url){
+    return encodeURIComponent(decodeURIComponent(url));
+}
 function isUrl(url){return /^(http|https):\/\/([\w-]+(:[\w-]+)?@)?[\w-]+(\.[\w-]+)+(:[\d]+)?([#\/\?][^\s<>;"\']*)?$/.test(url);}
 function getApiUrl(action,type){
 	if(isNaN(type)){
-		//return 'http://api.duoluohua.com/api/dupan/?action='+action+'&type=1&system=script&appname=dupanlink&version='+VERSION+'&t='+new Date().getTime();
-		return 'http://localhost/yyft/myapp/api/dupan/?action='+action+'&type=1&system=script&appname=dupanlink&version='+VERSION+'&t='+new Date().getTime();
+		return 'http://api.duoluohua.com/api/dupan/?action='+action+'&type=1&system=script&appname=dupanlink&version='+VERSION+'&t='+new Date().getTime();
 	}else{
 		return 'http://app.duoluohua.com/update?action='+action+'&system=script&appname=dupanlink&apppot=scriptjs&frompot=dupan&type='+type+'&version='+VERSION+'&t='+t;
 	}
@@ -599,5 +1027,7 @@ function googleAnalytics(){
 	loadJs(js);
 }
 googleAnalytics();
+
+
 
 
