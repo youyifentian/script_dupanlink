@@ -9,12 +9,12 @@
 // @license	GPL version 3
 // @encoding	utf-8
 // @date 	26/08/2013
-// @modified	11/11/2013
+// @modified	12/11/2013
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
 // @grant       GM_xmlhttpRequest
 // @run-at	document-end
-// @version	2.1.4
+// @version	2.1.5
 // ==/UserScript==
 
 /*
@@ -29,7 +29,7 @@
  * */
 
 
-var VERSION='2.1.4';
+var VERSION='2.1.5';
 var APPNAME='百度网盘助手';
 var t=new Date().getTime();
 
@@ -227,22 +227,31 @@ var t=new Date().getTime();
 	}
 	function getdownloadfile(iframe,type){
 		if(viewShare){
-			var data=viewShare.viewShareData,obj=JSON.parse(data),
-			url='http://pan.baidu.com/share/download?bdstoken='+viewShare.bdstoken+'&uk='+FileUtils.share_uk+'&shareid='+FileUtils.share_id+'&fid_list='+encodeURIComponent('['+obj.fs_id+']');
+			var data=viewShare.viewShareData,obj=JSON.parse(data),url=location.href;
 			GM_xmlhttpRequest({
 				method: 'GET',
 				url: url,
+				headers: {
+					"User-Agent": "User-Agent:Mozilla/5.0 (iPhone; U; CPU iPhone OS 3_1_2 like Mac OS X; en-us) AppleWebKit/528.18 (KHTML, like Gecko) Version/4.0 Mobile/7D11 Safari/528.16",
+					"Accept": "text/xml"
+				},
 				onload: function(response){
 					//alert(response.responseText);
-					var resdata=JSON.parse(response.responseText),dlink=resdata.dlink,status=resdata.errno;
-					obj.dlink=dlink;
-					viewShare.viewShareData=JSON.stringify(obj);
-					if (status===0 && iframe){
-						if(1==type){
-							var r=prompt(msg[4],url) || '';
-							if(r.length>=url.length)iframe.src=url;
-						}else{
-							iframe.src=url;
+					var html=response.responseText,regExp = /JSON.parse\((\"\[\{.*\}\]\")\)\;/,execs = regExp.exec(html);
+					//console.log(execs);
+					if(execs){
+						//console.log(execs[1]);
+						var resdata=JSON.parse(JSON.parse(execs[1])),dlink=resdata[0]['dlink'];
+						//console.log(resdata);
+						obj.dlink=dlink;
+						viewShare.viewShareData=JSON.stringify(obj);
+						if(iframe){
+							if(1==type){
+								var r=prompt(msg[4],dlink) || '';
+								if(r.length>=dlink.length)iframe.src=dlink;
+							}else{
+								iframe.src=dlink;
+							}
 						}
 					}else if(iframe){
 						myAlert(msg[30]);
@@ -331,7 +340,7 @@ var t=new Date().getTime();
 		dialog.startBtn=startQueryBtn;
 		dialog.isload=false;
 		dialog.isQueryLink=false;
-		locallink.style.display=/^(http|https):\/\/pan.baidu.com\/disk*\/home*\/*$/.test(location.href) ? 'none' : '';
+		locallink.style.display=/^(http|https):\/\/pan.baidu.com\/disk.*\/home.*$/.test(location.href) ? 'none' : '';
 		$(o).find(':radio').click(function(){
 			var hostlit=hostconfig.hostlist[this.id];
 			dialog.hostselect.innerHTML='';
@@ -672,7 +681,7 @@ var t=new Date().getTime();
 		html+='<span style="float:right;">';
 		html+='<span id="reslinkpage">共:&nbsp;1/'+page+'&nbsp;页</span>,&nbsp;'+total+'&nbsp;条&nbsp;&nbsp;';
 		html+=page>1 ? '<a href="javascript:;"style="text-decoration:underline;"type="first">首页</a>&nbsp;&nbsp;&nbsp;<a href="javascript:;"style="text-decoration:underline;"type="next">下一页</a>&nbsp;&nbsp;&nbsp;<a href="javascript:;"style="text-decoration:underline;"type="prev">上一页</a>&nbsp;&nbsp;&nbsp;<a href="javascript:;"style="text-decoration:underline;"type="last">末页</a>' : '';
-		html+=page >1 ? '&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:;"style="text-decoration:underline;"title="复制所以外链"type="copylink">复制</a>' : '';
+		html+=page >1 ? '&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:;"style="text-decoration:underline;"title="复制所有外链"type="copylink">复制</a>' : '';
 		html+='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
 		html+='<a href="javascript:;"style="text-decoration:underline;"title="清空结果"type="clear">清空</a>&nbsp;&nbsp;&nbsp;&nbsp;</span>';
 		html+='</dt>';
@@ -1027,6 +1036,8 @@ function googleAnalytics(){
 	loadJs(js);
 }
 googleAnalytics();
+
+
 
 
 
