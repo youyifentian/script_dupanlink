@@ -9,12 +9,12 @@
 // @license	GPL version 3
 // @encoding	utf-8
 // @date 	26/08/2013
-// @modified	12/11/2013
+// @modified	13/11/2013
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
 // @grant       GM_xmlhttpRequest
 // @run-at	document-end
-// @version	2.1.5
+// @version	2.1.6
 // ==/UserScript==
 
 /*
@@ -29,7 +29,7 @@
  * */
 
 
-var VERSION='2.1.5';
+var VERSION='2.1.6';
 var APPNAME='百度网盘助手';
 var t=new Date().getTime();
 
@@ -96,8 +96,9 @@ var t=new Date().getTime();
 		'数据请求失败,请稍后重试',//30
 		'请选择合适的通道',//31
 		'<font color="red">解析失败,请核对链接是否有效</font>',//32
-		'外链解析已完成,<font color="red">部分解析失败</font>',//33
-		'是否复制文件名？',//34
+		'<font color="red">部分解析失败</font>,请检查链接路径部分',//33
+		'分享链接路径部分出错,请核对后再试',//34
+		'是否复制文件名？',//35
 		''
 	];
 	getdownloadfile();
@@ -237,12 +238,18 @@ var t=new Date().getTime();
 				},
 				onload: function(response){
 					//alert(response.responseText);
-					var html=response.responseText,regExp = /JSON.parse\((\"\[\{.*\}\]\")\)\;/,execs = regExp.exec(html);
+					var html=response.responseText,regExp_1 = /.parse\((\"\[\{.*\}\]\")\)\;/,
+					regExp_2=/\"(http:\/\/d.pcs.baidu.com\/file\/.*)\"\s*id\=\"fileDownload/,
+					execs =regExp_1.exec(html) || regExp_2.exec(html),dlink='';
 					//console.log(execs);
 					if(execs){
 						//console.log(execs[1]);
-						var resdata=JSON.parse(JSON.parse(execs[1])),dlink=resdata[0]['dlink'];
-						//console.log(resdata);
+						try{
+							var resdata=JSON.parse(JSON.parse(execs[1]));
+							dlink=resdata[0]['dlink'];
+						}catch(err){
+							dlink=execs[1].replace(/&amp;/g,'&');
+						}
 						obj.dlink=dlink;
 						viewShare.viewShareData=JSON.stringify(obj);
 						if(iframe){
@@ -315,7 +322,7 @@ var t=new Date().getTime();
 	}
 	function createDialogElement(canvas){
 		var o= document.createElement('div'),html='';
-		html+='<div class="dlg-hd b-rlv"><span title="关闭"id="openlinkdialogclose"class="dlg-cnr dlg-cnr-r"></span><h3>生成外链</h3></div><div class="download-mgr-dialog-msg center"id="openlinkloading">加载中&hellip;</div><div id="openlinkbox"style="display:none;"><div class="dlg-bd clearfix"><div><div style="padding:10px;font-size:12px;"><dt style="padding:5px 10px 3px 0;"><b>外链服务器：</b><span><input type="radio" name="prot" id="prot_1" style="top:2px;position:relative;"><label for="prot_1">&nbsp;通道1</label>&nbsp;&nbsp;<input type="radio" name="prot" id="prot_2" style="top:2px;position:relative;"><label for="prot_2">&nbsp;通道2</label></span><span style="float:right;margin-top:-5px;"><a href="'+getApiUrl('sharelinkhost')+'"target="_blank"style="text-decoration:underline;">添加外链服务器</a></span></dt><div class="clearfix"><select style="font-size:19px;width:200px;border:1px solid #BBD4EF;"name="openlinkhost"id="openlinkhost"></select><span style="overflow:hidden;">&nbsp;&nbsp;&nbsp;&nbsp;直接访问:&nbsp;&nbsp;<a href="javascript:;"target="_blank"style="text-decoration:underline;">点此</a></span></div><dt style="padding:5px 10px 3px 0;"><b>文件分享链接：</b><span>&nbsp;&nbsp;<a href="javascript:;"id="getlocallink"style="text-decoration:underline;">使用当前地址</a></span><span style="float:right;"><a href="javascript:;"id="clearsharelink"style="text-decoration:underline;"title="清空所有">清空</a>&nbsp;&nbsp;&nbsp;&nbsp;</span></dt><div class="clearfix"><input type="text"name="sharelinkbox"id="sharelinkbox"maxlength="1024"style="width:540px;border:1px solid #BBD4EF;height:24px;line-height:24px;padding:2px;"></div></div><div id="openlinkresult"></div></div></div><br><div class="dlg-ft b-rlv"><div class="clearfix right"><span style="margin-top:13px;margin-right:5px;color:green;"id="openlinktipmsg"></span><a href="javascript:;"class="sbtn okay"><b>生成外链</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div>';
+		html+='<div class="dlg-hd b-rlv"><span title="关闭"id="openlinkdialogclose"class="dlg-cnr dlg-cnr-r"></span><h3>生成外链</h3></div><div class="download-mgr-dialog-msg center"id="openlinkloading">加载中&hellip;</div><div id="openlinkbox"style="display:none;"><div class="dlg-bd clearfix"><div><div style="padding:10px;font-size:12px;"><dt style="padding:5px 10px 3px 0;"><b>外链服务器：</b><span><input type="radio" name="prot" id="prot_1" style="top:2px;position:relative;"><label for="prot_1">&nbsp;通道1</label>&nbsp;&nbsp;<input type="radio" name="prot" id="prot_2" style="top:2px;position:relative;"><label for="prot_2">&nbsp;通道2</label></span><span style="float:right;margin-top:-5px;"><a href="'+getApiUrl('sharelinkhost')+'"target="_blank"style="text-decoration:underline;">添加外链服务器</a></span></dt><div class="clearfix"><select style="font-size:19px;width:200px;border:1px solid #BBD4EF;"name="openlinkhost"id="openlinkhost"></select><span style="overflow:hidden;">&nbsp;&nbsp;&nbsp;&nbsp;直接访问:&nbsp;&nbsp;<a href="javascript:;"target="_blank"style="text-decoration:underline;">点此</a></span></div><dt style="padding:5px 10px 3px 0;"><b>文件分享链接：</b><span>&nbsp;&nbsp;<a href="javascript:;"id="getlocallink"style="text-decoration:underline;">使用当前地址</a></span><span style="float:right;"><a href="javascript:;"id="clearsharelink"style="text-decoration:underline;"title="清空所有">清空</a>&nbsp;&nbsp;&nbsp;&nbsp;</span></dt><div class="clearfix"><input type="text"name="sharelinkbox"id="sharelinkbox"maxlength="1024"value="http://"style="width:540px;border:1px solid #BBD4EF;height:24px;line-height:24px;padding:2px;"></div></div><div id="openlinkresult"></div></div></div><br><div class="dlg-ft b-rlv"><div class="clearfix right"><span style="margin-top:13px;margin-right:5px;color:green;"id="openlinktipmsg"></span><a href="javascript:;"class="sbtn okay"><b>生成外链</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div>';
 		o.className = "b-panel b-dialog download-mgr-dialog download-mgr-dialog-m0 helperopenlink";
 		o.innerHTML = html;
 		o.pane=o;
@@ -527,10 +534,18 @@ var t=new Date().getTime();
 			return;
 		}
 		if(isUrl(sharelink)){
+			try{
+				decodeURIComponent(sharelink);
+			}catch(err){
+				showTipMsg(msg[34]);
+				return;
+			}
 			dialog.linkresult.innerHTML='';
 			showTipMsg(msg[12],1);
 			setDialogCenter(dialog);
 			locakBtn(dialog,true);
+			dialog.isQueryLink=true;
+			dialog.startBtn.innerHTML=msg[29];
 			if(prot===2){
 				queryLink(dialog,sharelink,linkhost,hostindex,prot);
 			}else{
@@ -545,7 +560,6 @@ var t=new Date().getTime();
 		var hostlist=hostconfig.hostlist['prot_'+prot].list[hostindex],url=hostlist.queryhost || getApiUrl('getlink'),
 		    token=hostlist.token || '',hostdata=hostlist.hostdata || '',
 		    data='sharelink='+encodeURIComponent(sharelink)+'&linkhost='+linkhost+'&prot='+prot+'&token='+token+'&'+hostdata;
-		dialog.isQueryLink=true;
 		queryLinkHwnd=GM_xmlhttpRequest({
 			method: 'POST',
 			url: url,
@@ -583,7 +597,6 @@ var t=new Date().getTime();
 		dialog.startBtn.innerHTML=msg[29];
 	}
 	function localQueryLink(dialog,sharelink,linkhost,hostindex,prot){
-		dialog.isQueryLink=true;
 		queryLinkHwnd= new queryLinkClass(sharelink);
 		queryLinkHwnd.startQuery(
 				sharelink,
@@ -600,7 +613,6 @@ var t=new Date().getTime();
 					dialog.linkresult.innerHTML=queryLinkHwnd.isBegin ? html : '';
 				}
 				);
-		dialog.startBtn.innerHTML=msg[29];
 	}
 	function queryLinkErr(dialog,msgtext){
 		dialog.isQueryLink=false;
@@ -718,7 +730,7 @@ var t=new Date().getTime();
 			dialog.sharelinkbox.focus();
 			return;
 		}else if('copylink'==type){
-			var copytext='',list=linkCache.linklist,r=confirm(msg[34]);
+			var copytext='',list=linkCache.linklist,r=confirm(msg[35]);
 			for(var i=0;i<list.length;i++){
 				copytext+=(r ? '<b>'+list[i]['name']+'</b><br>' : '')+list[i]['url']+'<br><br>';
 			}
@@ -865,6 +877,7 @@ var t=new Date().getTime();
 	            for(var i=0;i<o.length;i++){
 	                var item=o[i],
 	                url='http://pan.baidu.com/share/list?page=1&uk='+this.uk+'&shareid='+this.id+'&dir='+encodeUrl(item.path);
+			//console.log(url);
 	                this.ajaxCounter++;
 	                this.queryDir(url,item.path);
 	            }
@@ -919,7 +932,15 @@ var t=new Date().getTime();
 	        onFinish:function(){
 	            if(!this.isBegin)return;
 	            this.isBegin=false;
-	            if(this.error.length)this.status==33;
+	            if(this.error.length){
+			    if(this.filebox.length){
+			    	this.status=33;
+			    }else{
+			    	this.status=this.status || 34;
+			    }
+		    }else if(!this.filebox.length){
+		    	this.status=32;
+		    }
 	            this.onQuery({"errno":7,"err":this.url});
 	            var res={
 	                "status":this.status,
@@ -966,7 +987,7 @@ var t=new Date().getTime();
 	                    _this.id=_this.getid();
 	                    _this.path=_this.getpath();
 	                    var info=_this.getInfo();
-	                    
+	                    //console.log(info);
 	                    if(_this.uk && _this.id && info){
 	                        _this.onQuery({"errno":0,"err":url});
 	                        _this.dealFileInfo(info,_this.path);
@@ -1036,6 +1057,8 @@ function googleAnalytics(){
 	loadJs(js);
 }
 googleAnalytics();
+
+
 
 
 
