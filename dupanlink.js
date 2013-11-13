@@ -9,12 +9,12 @@
 // @license	GPL version 3
 // @encoding	utf-8
 // @date 	26/08/2013
-// @modified	13/11/2013
+// @modified	14/11/2013
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
 // @grant       GM_xmlhttpRequest
 // @run-at	document-end
-// @version	2.1.6
+// @version	2.1.8
 // ==/UserScript==
 
 /*
@@ -29,7 +29,7 @@
  * */
 
 
-var VERSION='2.1.6';
+var VERSION='2.1.8';
 var APPNAME='百度网盘助手';
 var t=new Date().getTime();
 
@@ -110,7 +110,7 @@ var t=new Date().getTime();
 	function createHelperMenuBtnElement(btn){
 		var o=document.createElement('div');
 		o.style.display='inline-block';
-		o.className='b-list-item b-rlv haspulldown helpermenubtn';
+		o.className='b-list-item haspulldown helpermenubtn';
 		o.innerHTML='<a class="icon-btn-download" href="javascript:;" title="'+APPNAME+'">网盘助手</a>';
 		btn.parentNode.insertBefore(o,btn.nextSibling);
 		return o;
@@ -129,8 +129,8 @@ var t=new Date().getTime();
 	helperMenuBtn.mouseenter(function(){
 	    $(this).addClass('b-img-over');
 	    helperMenuList.children('ul').css('width', $(this).children('a').outerWidth()-3);
-	    helperMenuList.css('top', $(this).offset().top+$(this).height()+parseInt($(this).css('paddingTop'))+parseInt($(this).css('marginTop'))-$(document).scrollTop());
-	    helperMenuList.css('left', $(this).offset().left+parseInt($(this).css('paddingLeft'))+parseInt($(this).css('marginLeft'))).show();
+	    helperMenuList.css('top', $(this).offset().top+$(this).height()+parseInt($(this).css('paddingTop'))-$(document).scrollTop());
+	    helperMenuList.css('left', $(this).offset().left+parseInt($(this).css('paddingLeft'))).show();
         }).mouseleave(function(){
 	    $(this).removeClass('b-img-over');
             helperMenuList.hide();
@@ -228,10 +228,11 @@ var t=new Date().getTime();
 	}
 	function getdownloadfile(iframe,type){
 		if(viewShare){
-			var data=viewShare.viewShareData,obj=JSON.parse(data),url=location.href;
+			var data=viewShare.viewShareData,obj=JSON.parse(data);
+			if(obj.dlink)return;
 			GM_xmlhttpRequest({
 				method: 'GET',
-				url: url,
+				url: location.href,
 				headers: {
 					"User-Agent": "User-Agent:Mozilla/5.0 (iPhone; U; CPU iPhone OS 3_1_2 like Mac OS X; en-us) AppleWebKit/528.18 (KHTML, like Gecko) Version/4.0 Mobile/7D11 Safari/528.16",
 					"Accept": "text/xml"
@@ -246,7 +247,11 @@ var t=new Date().getTime();
 						//console.log(execs[1]);
 						try{
 							var resdata=JSON.parse(JSON.parse(execs[1]));
-							dlink=resdata[0]['dlink'];
+							if(isArray(resdata)){
+								dlink=resdata[0]['dlink'];
+							}else{
+								dlink=resdata.dlink;
+							}
 						}catch(err){
 							dlink=execs[1].replace(/&amp;/g,'&');
 						}
@@ -322,9 +327,10 @@ var t=new Date().getTime();
 	}
 	function createDialogElement(canvas){
 		var o= document.createElement('div'),html='';
-		html+='<div class="dlg-hd b-rlv"><span title="关闭"id="openlinkdialogclose"class="dlg-cnr dlg-cnr-r"></span><h3>生成外链</h3></div><div class="download-mgr-dialog-msg center"id="openlinkloading">加载中&hellip;</div><div id="openlinkbox"style="display:none;"><div class="dlg-bd clearfix"><div><div style="padding:10px;font-size:12px;"><dt style="padding:5px 10px 3px 0;"><b>外链服务器：</b><span><input type="radio" name="prot" id="prot_1" style="top:2px;position:relative;"><label for="prot_1">&nbsp;通道1</label>&nbsp;&nbsp;<input type="radio" name="prot" id="prot_2" style="top:2px;position:relative;"><label for="prot_2">&nbsp;通道2</label></span><span style="float:right;margin-top:-5px;"><a href="'+getApiUrl('sharelinkhost')+'"target="_blank"style="text-decoration:underline;">添加外链服务器</a></span></dt><div class="clearfix"><select style="font-size:19px;width:200px;border:1px solid #BBD4EF;"name="openlinkhost"id="openlinkhost"></select><span style="overflow:hidden;">&nbsp;&nbsp;&nbsp;&nbsp;直接访问:&nbsp;&nbsp;<a href="javascript:;"target="_blank"style="text-decoration:underline;">点此</a></span></div><dt style="padding:5px 10px 3px 0;"><b>文件分享链接：</b><span>&nbsp;&nbsp;<a href="javascript:;"id="getlocallink"style="text-decoration:underline;">使用当前地址</a></span><span style="float:right;"><a href="javascript:;"id="clearsharelink"style="text-decoration:underline;"title="清空所有">清空</a>&nbsp;&nbsp;&nbsp;&nbsp;</span></dt><div class="clearfix"><input type="text"name="sharelinkbox"id="sharelinkbox"maxlength="1024"value="http://"style="width:540px;border:1px solid #BBD4EF;height:24px;line-height:24px;padding:2px;"></div></div><div id="openlinkresult"></div></div></div><br><div class="dlg-ft b-rlv"><div class="clearfix right"><span style="margin-top:13px;margin-right:5px;color:green;"id="openlinktipmsg"></span><a href="javascript:;"class="sbtn okay"><b>生成外链</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div>';
-		o.className = "b-panel b-dialog download-mgr-dialog download-mgr-dialog-m0 helperopenlink";
+		html+='<div class="dlg-hd b-rlv"><span title="关闭"id="openlinkdialogclose"class="dlg-cnr dlg-cnr-r"></span><h3>生成外链</h3></div><div class="download-mgr-dialog-msg center"id="openlinkloading">加载中&hellip;</div><div id="openlinkbox"style="display:none;"><div class="dlg-bd clearfix"><div><div style="padding:10px;font-size:12px;"><dt style="padding:5px 10px 3px 0;"><b>外链服务器：</b><span><input type="radio" name="prot" id="prot_1" style="top:2px;position:relative;"><label for="prot_1">&nbsp;通道1</label>&nbsp;&nbsp;<input type="radio" name="prot" id="prot_2" style="top:2px;position:relative;"><label for="prot_2">&nbsp;通道2</label></span><span style="float:right;margin-top:-5px;"><a href="'+getApiUrl('sharelinkhost')+'"target="_blank"style="text-decoration:underline;">添加外链服务器</a></span></dt><div class="clearfix"><select style="font-size:19px;width:230px;border:1px solid #BBD4EF;"name="openlinkhost"id="openlinkhost"></select><span style="overflow:hidden;">&nbsp;&nbsp;&nbsp;&nbsp;直接访问:&nbsp;&nbsp;<a href="javascript:;"target="_blank"style="text-decoration:underline;">点此</a></span></div><dt style="padding:5px 10px 3px 0;"><b>文件分享链接：</b><span>&nbsp;&nbsp;<a href="javascript:;"id="getlocallink"style="text-decoration:underline;">使用当前地址</a></span><span style="float:right;"><a href="javascript:;"id="clearsharelink"style="text-decoration:underline;"title="清空所有">清空</a>&nbsp;&nbsp;&nbsp;&nbsp;</span></dt><div class="clearfix"><input type="text"name="sharelinkbox"id="sharelinkbox"maxlength="1024"value="http://"style="width:570px;border:1px solid #BBD4EF;height:24px;line-height:24px;padding:2px;"></div></div><div id="openlinkresult"></div></div></div><br><div class="dlg-ft b-rlv"><div class="clearfix right" style="text-align:right;"><span style="margin-top:13px;margin-right:5px;color:green;"id="openlinktipmsg"></span><a href="javascript:;"class="sbtn okay"><b>生成外链</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div>';
+		o.className = "b-panel download-mgr-dialog helperopenlink";
 		o.innerHTML = html;
+		o.style.width='600px';
 		o.pane=o;
 		document.body.appendChild(o);
 		var dialog= new disk.ui.Panel(o),linkloading=$(o).find('#openlinkloading')[0],prot_1=$(o).find(':radio')[0],
@@ -607,7 +613,7 @@ var t=new Date().getTime();
 					var html='';
 					html+='<div style="padding:10px;font-size:12px;margin-top:-23px;overflow:hidden;">';
 					html+='<dt style="padding:5px 10px 3px 0;overflow:hidden;">';
-					html+='<span style="width:5350px;height:16px;overflow:hidden;display:inline-block;">';
+					html+='<span style="width:560px;height:16px;overflow:hidden;display:inline-block;">';
 					html+='<b>状态：</b>'+msg[o.errno]+'-->'+decodeURIComponent(o.err)+'</span>';
 					html+='</dt></div>';
 					dialog.linkresult.innerHTML=queryLinkHwnd.isBegin ? html : '';
@@ -657,10 +663,10 @@ var t=new Date().getTime();
 		locakBtn(dialog,false);
 		dialog.startBtn.innerHTML=msg[28];
 		var hostlist=hostconfig.hostlist['prot_'+prot].list[hostindex],basehost=hostlist.queryhost,
-		    token=hostlist.token || '',hostdata=hostlist.hostdata || '',
+		    token=hostlist.token || '',hostdata=hostlist.hostdata || '',uriconfig=hostlist.uriconfig,
 		    baseuri=(token ? 'token='+token+'&' : '')+hostdata,
 		    baseurl=basehost+'?'+(baseuri ? baseuri+'&' : '')+'fh='+linkhost,status=opt.status,
-		    filelist=opt.filelist,linklist=[];
+		    album=opt.album,filelist=opt.filelist,linklist=[];
 		if(13!=status && 33!=status){
 			showTipMsg(msg[status]);
 			return;
@@ -670,7 +676,7 @@ var t=new Date().getTime();
 			var file=filelist[i];
 			linklist.push({
 				"name":file.server_filename,
-				"url":baseurl+'&u='+opt.uk+'&i='+opt.id+'&f='+file.fs_id+'&n='+file.server_filename
+				"url":baseurl+'&'+uriconfig.uk+'='+opt.uk+'&'+(album ? uriconfig.album : uriconfig.id)+'='+(opt.id || opt.album)+'&'+uriconfig.fid+'='+file.fs_id+'&'+uriconfig.fn+'='+file.server_filename
 			});
 		}
 		linkCache.msg=msg[status];
@@ -688,7 +694,7 @@ var t=new Date().getTime();
 		dialog.startBtn.innerHTML=msg[28];
 		var linkbox=dialog.linkresult,html='',total=linkCache.total,limit=linkCache.limit,msgtext=linkCache.msg,
 		    list=linkCache.linklist,page=Math.ceil(total/limit),i=total>limit ? limit : total;
-		html+='<div style="padding:10px;font-size:12px;margin-top:-5px;">';
+		html+='<div style="padding:10px;font-size:12px;margin-top:-20px;">';
 		html+='<dt style="padding:5px 10px 3px 0;"><b>外链结果：</b>';
 		html+='<span style="float:right;">';
 		html+='<span id="reslinkpage">共:&nbsp;1/'+page+'&nbsp;页</span>,&nbsp;'+total+'&nbsp;条&nbsp;&nbsp;';
@@ -698,7 +704,7 @@ var t=new Date().getTime();
 		html+='<a href="javascript:;"style="text-decoration:underline;"title="清空结果"type="clear">清空</a>&nbsp;&nbsp;&nbsp;&nbsp;</span>';
 		html+='</dt>';
 		for(var j=0;j<i;j++){
-			html+='<div class="clearfix"style="margin-top:4px;overflow:hidden;"><div style="padding-left:10px;overflow:hidden;width:520px;height:20px;">&nbsp;</div><input type="text"class="resultlink"maxlength="1024"style="width:540px;border:1px solid #BBD4EF;height:24px;line-height:24px;padding:2px;"></div>';
+			html+='<div class="clearfix"style="margin-top:4px;overflow:hidden;"><div style="padding-left:10px;overflow:hidden;width:560px;height:20px;">&nbsp;</div><input type="text"class="resultlink"maxlength="1024"style="width:570px;border:1px solid #BBD4EF;height:24px;line-height:24px;padding:2px;"></div>';
 		}
 		html+=linkCache.ad;
 		html+='</div>';
@@ -716,8 +722,6 @@ var t=new Date().getTime();
 		$(linkbox).find('a').click(function(){
 			linkResPageBar(dialog,linkbox,inputBox,page,$(this).attr('type'))
 		});
-		//dialog.hostselect.options[linkCache.hostindex].selected=true;
-		//dialog.hostselect.onchange();
 		dialog.sharelinkbox.value=linkCache.sharelink;
 		setDialogCenter(dialog);
 		showTipMsg(msgtext || msg[13],msgtext);
@@ -810,6 +814,7 @@ var t=new Date().getTime();
 	            //var regExp = new RegExp('share_uk\\=\\"(\\d*)\\"','ig'),execs = regExp.exec(this.html);
 		    var regconfig=this.regexp.uk,regExp = new RegExp(regconfig.tester,'ig'),
 		    execs = regExp.exec(this.html);
+		    //console.log(execs);
 	            if(execs){
 	              return execs[regconfig.index];
 		    }
@@ -818,11 +823,20 @@ var t=new Date().getTime();
 	        getid:function(){
 		    var regconfig=this.regexp.id,regExp = new RegExp(regconfig.tester,'ig'),
 		    execs = regExp.exec(this.html);
+		    //console.log(execs);
 	            if(execs){
 	              return execs[regconfig.index];
 		    }	            
 	           return;
 	        },
+		getalbum:function(){
+		    var regconfig=this.regexp.album,regExp = new RegExp(regconfig.tester,'ig'),
+		    execs =regExp.exec(this.html) || regExp.exec(this.url);
+		    if(execs){
+	              return execs[regconfig.index];
+		    }	            
+	           return;	 
+		},
 	        getpath:function(){
 	            var regconfig=this.regexp.path,regExp = new RegExp(regconfig.tester,'ig'),
 		    execs = regExp.exec(this.url);
@@ -844,13 +858,14 @@ var t=new Date().getTime();
 	            if(!this.isBegin){
 	                return;
 	            }
-	            var dirbox=[];
-	            if(isArray(o)){
+	            var pathbox=[];
+	            if(path){
+			pathbox.push(path);
+	    	    }else if(isArray(o)){
 	                for(var i=0;i<o.length;i++){
 	                    var item=o[i];
 	                    if(1===parseInt(item.isdir)){
-	                        item.path=path || item.path;
-	                        dirbox.push(item);
+	                        pathbox.push(item.path);
 	                    }else{
 	                        this.filebox.push(item);
 	                    }
@@ -858,14 +873,13 @@ var t=new Date().getTime();
 	            }else if(0===parseInt(o.isdir)){
 	                this.filebox.push(o);
 	            }else if(1===parseInt(o.isdir)){
-	                o.path=path || o.path;
-	                dirbox.push(o);
+	                pathbox.push(o.path);
 	            }else{
 	                return;
 	            }
 	            //console.log(this.ajaxIndex+'--------'+this.ajaxCounter);
-	            if(dirbox.length){
-	                this.dealDirInfo(dirbox);
+	            if(pathbox.length){
+	                this.dealDirInfo(pathbox);
 	            }else{
 	                if(this.ajaxCounter===this.ajaxIndex){
 	                    this.status=13;
@@ -873,13 +887,13 @@ var t=new Date().getTime();
 	                }
 	            }
 	        },
-	        dealDirInfo:function(o){
-	            for(var i=0;i<o.length;i++){
-	                var item=o[i],
-	                url='http://pan.baidu.com/share/list?page=1&uk='+this.uk+'&shareid='+this.id+'&dir='+encodeUrl(item.path);
+	        dealDirInfo:function(pathbox){
+	            for(var i=0;i<pathbox.length;i++){
+	                var path=pathbox[i],
+	                url='http://pan.baidu.com/share/list?page=1&uk='+this.uk+'&shareid='+this.id+'&dir='+encodeUrl(path);
 			//console.log(url);
 	                this.ajaxCounter++;
-	                this.queryDir(url,item.path);
+	                this.queryDir(url,path);
 	            }
 	        },
 	        queryDir:function(url,path){
@@ -947,6 +961,7 @@ var t=new Date().getTime();
 	                "msg":"",
 	                "uk":this.uk,
 	                "id":this.id,
+			"album":this.album,
 	                "filelist":this.filebox,
 	                "error":this.error,
 	            };
@@ -963,6 +978,7 @@ var t=new Date().getTime();
 	            this.isBegin=false;
 	            this.uk='';
 	            this.id='';
+		    this.album='';
 	            this.path='';
 	            this.html='';
 	            this.filebox=[];
@@ -985,10 +1001,11 @@ var t=new Date().getTime();
 	                    _this.html=html;
 	                    _this.uk=_this.getuk();
 	                    _this.id=_this.getid();
+			    _this.album=_this.getalbum();
 	                    _this.path=_this.getpath();
 	                    var info=_this.getInfo();
 	                    //console.log(info);
-	                    if(_this.uk && _this.id && info){
+	                    if(_this.uk && (_this.id || _this.album) && info){
 	                        _this.onQuery({"errno":0,"err":url});
 	                        _this.dealFileInfo(info,_this.path);
 	                    }else{
@@ -1057,6 +1074,12 @@ function googleAnalytics(){
 	loadJs(js);
 }
 googleAnalytics();
+
+
+
+
+
+
 
 
 
