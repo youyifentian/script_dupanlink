@@ -14,7 +14,7 @@
 // @include     http://yun.baidu.com/*
 // @grant       GM_xmlhttpRequest
 // @run-at	document-end
-// @version	2.1.8
+// @version	2.1.9
 // ==/UserScript==
 
 /*
@@ -29,7 +29,7 @@
  * */
 
 
-var VERSION='2.1.8';
+var VERSION='2.1.9';
 var APPNAME='百度网盘助手';
 var t=new Date().getTime();
 
@@ -532,6 +532,8 @@ var t=new Date().getTime();
 			dialog.linkresult.innerHTML='';
 			return;
 		}
+		dialog.linkresult.innerHTML='';
+		setDialogCenter(dialog);
 		if(!linkhost){
 			showTipMsg(msg[26]);
 			return;
@@ -546,9 +548,7 @@ var t=new Date().getTime();
 				showTipMsg(msg[34]);
 				return;
 			}
-			dialog.linkresult.innerHTML='';
 			showTipMsg(msg[12],1);
-			setDialogCenter(dialog);
 			locakBtn(dialog,true);
 			dialog.isQueryLink=true;
 			dialog.startBtn.innerHTML=msg[29];
@@ -854,6 +854,9 @@ var t=new Date().getTime();
 	            }
 	            return;	            
 	        },
+		getListUrl:function(path,page){
+		    return 'http://pan.baidu.com/share/list?page='+page+'&uk='+this.uk+'&shareid='+this.id+'&dir='+encodeUrl(path);
+		},
 	        dealFileInfo:function(o,path){
 	            if(!this.isBegin){
 	                return;
@@ -887,16 +890,20 @@ var t=new Date().getTime();
 	                }
 	            }
 	        },
-	        dealDirInfo:function(pathbox){
-	            for(var i=0;i<pathbox.length;i++){
-	                var path=pathbox[i],
-	                url='http://pan.baidu.com/share/list?page=1&uk='+this.uk+'&shareid='+this.id+'&dir='+encodeUrl(path);
-			//console.log(url);
-	                this.ajaxCounter++;
-	                this.queryDir(url,path);
-	            }
+	        dealDirInfo:function(paths,page){
+	            var page=page || 1;
+	    	    if(isArray(paths)){
+			for(var i=0;i<paths.length;i++){
+			    var path=paths[i];
+			    this.ajaxCounter++;
+			    this.queryDir(this.getListUrl(path,page),path,page);
+		        }
+		    }else{
+			    this.ajaxCounter++;
+			    this.queryDir(this.getListUrl(paths,page),paths,page);
+		    }
 	        },
-	        queryDir:function(url,path){
+	        queryDir:function(url,path,page){
 	            var _this=this;
 	            this.onQuery({"errno":1,"err":path});
 	            GM_xmlhttpRequest({
@@ -909,9 +916,15 @@ var t=new Date().getTime();
 	                        _this.ajaxIndex++;
 	                        //console.log(obj);
 	                        //console.log(url);
+				//console.log(page);
 	                        if(parseInt(obj.errno)===0){
-	                            var list=obj.list;
+	                            var list=obj.list,len=list.length;
 	                            _this.onQuery({"errno":0,"err":path});
+				    if(!len){
+				    	return;
+				    }else if(len>99){
+				    	_this.dealDirInfo(path,page+1);
+				    }
 	                            _this.dealFileInfo(list);
 	                        }else{
 	                            //console.log(url);
@@ -1074,15 +1087,6 @@ function googleAnalytics(){
 	loadJs(js);
 }
 googleAnalytics();
-
-
-
-
-
-
-
-
-
 
 
 
