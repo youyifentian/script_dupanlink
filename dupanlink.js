@@ -9,12 +9,12 @@
 // @license	GPL version 3
 // @encoding	utf-8
 // @date 	26/08/2013
-// @modified	14/11/2013
+// @modified	15/11/2013
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
 // @grant       GM_xmlhttpRequest
 // @run-at	document-end
-// @version	2.1.9
+// @version	2.2.1
 // ==/UserScript==
 
 /*
@@ -29,7 +29,7 @@
  * */
 
 
-var VERSION='2.1.9';
+var VERSION='2.2.1';
 var APPNAME='百度网盘助手';
 var t=new Date().getTime();
 
@@ -41,8 +41,8 @@ var t=new Date().getTime();
 	FileUtils=unsafeWindow.FileUtils;
 	Page=unsafeWindow.Page;
 	Utilities=unsafeWindow.Utilities;
-	var isShareManagerMode=Page.inViewMode(Page.VIEW_SHARE_PROPERTY_OWN),copywindow=null,
-	downProxy=disk.util.DownloadProxy,viewShare=disk.util.ViewShareUtils || null,index=0,shareData=null,
+	var isShareManagerMode=Page.inViewMode(Page.VIEW_SHARE_PROPERTY_OWN),isOther=Page.inViewMode(Page.VIEW_PROPERTY_OTHER),
+	downProxy=disk.util.DownloadProxy,shareData=disk.util.ViewShareUtils || null,shareHtml=null,copywindow=null,index=0,
 	btnArr=(function(){
 		var node=document.createElement('div');
 		node.id='helpermenubox';
@@ -99,10 +99,11 @@ var t=new Date().getTime();
 		'<font color="red">部分解析失败</font>,请检查链接路径部分',//33
 		'分享链接路径部分出错,请核对后再试',//34
 		'是否复制文件名？',//35
+		'数据尚未加载完毕,请稍后重试...',//36
 		''
 	];
-	getdownloadfile();
 	queryHost();
+	getdownloadfile();
 	checkUpdate();
 	for(var i=0;i<btnArr.length;i++){
 		var item=btnArr[i],o=createHelperMenuBtnElement(item);
@@ -154,8 +155,8 @@ var t=new Date().getTime();
 		downProxy._warmupHTML();
 		var items=[],iframe=$('#pcsdownloadiframe')[0];
 		iframe.src='javascript:;';
-		if(viewShare){
-			var data=viewShare.viewShareData,obj=JSON.parse(data);
+		if(shareData){
+			var data=shareData.viewShareData,obj=JSON.parse(data);
 			items.push(obj);
 		}else{
 			items=FileUtils.getListViewCheckedItems();
@@ -169,18 +170,19 @@ var t=new Date().getTime();
 			myAlert(msg[2]);
 			return;
 		}
-		var isOneFile=(len==1 && items[0].isdir==0),isOther=Page.inViewMode(Page.VIEW_PROPERTY_OTHER),r=null;
+		var isOneFile=(len==1 && items[0].isdir==0),r='';
 		if(isOneFile){
 			var url=items[0].dlink;
-				if (url) {
+				if (isUrl(url)) {
 					if(1==type){
-						var r=prompt(msg[4],url) || '';
+						r=prompt(msg[4],url) || '';
 						if(r.length>=url.length)iframe.src=url;
 					}else{
 						iframe.src=url;
 					}
 				}else{
 					getdownloadfile(iframe,type);
+					return;
 				}
 				
 		}else{
@@ -226,10 +228,61 @@ var t=new Date().getTime();
 			if(!type)alert(msg);
 		}
 	}
+	function initDownloadInfo(iframe,type){
+		var data=shareData.viewShareData,obj=JSON.parse(data);
+		if(isUrl(obj.dlink))return;
+		try{
+			var cache=hostCache(1),regconfig=cache.regexp.dlink,
+			regExp_1 = new RegExp(regconfig.tester_1,'ig'),regExp_2=new RegExp(regconfig.tester_2,'ig'),
+			execs = regExp_1.exec(shareHtml) || regExp_2.exec(shareHtml),dlink='',items=[];
+		}catch(err){
+			if(type<2){
+				myAlert(msg[36]);
+			}
+			return;
+		}
+	        //console.log(execs);
+		if(execs){
+			try{
+				var resdata=JSON.parse(JSON.parse(execs[regconfig.index_1])),linkkey=regconfig.linkkey;
+				if(isArray(resdata)){
+					resdata=resdata[regconfig.index];
+				}
+				//console.log(resdata);
+				for(var i=0;i<linkkey.length;i++){
+					var key=linkkey[i];
+					if(resdata[key]){
+						dlink=resdata[key];
+					}
+				}
+			}catch(err){
+				dlink=execs[regconfig.index_2].replace(/&amp;/g,'&');
+			}
+			obj.dlink=dlink;
+			items.push[obj];
+			shareData.viewShareData=JSON.stringify(obj);
+			if(iframe){
+				if(1==type){
+					var r=prompt(msg[4],dlink) || '';
+					if(r.length>=dlink.length)iframe.src=dlink;
+				}else{
+					iframe.src=dlink;
+				}
+				if(isOther)downloadCounter(items,1);
+				if(0==type || r)myAlert(msg[3],1);
+			}
+		}else if(iframe){
+			myAlert(msg[30]);
+		}
+	}
 	function getdownloadfile(iframe,type){
-		if(viewShare){
-			var data=viewShare.viewShareData,obj=JSON.parse(data);
-			if(obj.dlink)return;
+		if(shareData){
+			var data=shareData.viewShareData,obj=JSON.parse(data);
+			if(isUrl(obj.dlink))return;
+			if(shareHtml){
+				initDownloadInfo(iframe,type);
+				return;
+			}
 			GM_xmlhttpRequest({
 				method: 'GET',
 				url: location.href,
@@ -239,35 +292,8 @@ var t=new Date().getTime();
 				},
 				onload: function(response){
 					//alert(response.responseText);
-					var html=response.responseText,regExp_1 = /.parse\((\"\[\{.*\}\]\")\)\;/,
-					regExp_2=/\"(http:\/\/d.pcs.baidu.com\/file\/.*)\"\s*id\=\"fileDownload/,
-					execs =regExp_1.exec(html) || regExp_2.exec(html),dlink='';
-					//console.log(execs);
-					if(execs){
-						//console.log(execs[1]);
-						try{
-							var resdata=JSON.parse(JSON.parse(execs[1]));
-							if(isArray(resdata)){
-								dlink=resdata[0]['dlink'];
-							}else{
-								dlink=resdata.dlink;
-							}
-						}catch(err){
-							dlink=execs[1].replace(/&amp;/g,'&');
-						}
-						obj.dlink=dlink;
-						viewShare.viewShareData=JSON.stringify(obj);
-						if(iframe){
-							if(1==type){
-								var r=prompt(msg[4],dlink) || '';
-								if(r.length>=dlink.length)iframe.src=dlink;
-							}else{
-								iframe.src=dlink;
-							}
-						}
-					}else if(iframe){
-						myAlert(msg[30]);
-					}
+					shareHtml=response.responseText;
+					initDownloadInfo(iframe,type);
 				},
 				onerror: function(response){
 					if(iframe){
@@ -1087,6 +1113,8 @@ function googleAnalytics(){
 	loadJs(js);
 }
 googleAnalytics();
+
+
 
 
 
