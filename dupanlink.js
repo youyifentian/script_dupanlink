@@ -233,10 +233,7 @@ var t = new Date().getTime();
     }
     function getDownloadInfo(type, items, vcode) {
         if(!vcode) {showHelperDialog(3, items);}
-        var url = '',
-        data = '',
-        fidlist = '',
-        fids = [];
+        var url = '',data = '',fidlist = '',fids = [];
         for (var i = 0; i < items.length; i++) {
             fids.push(items[i]['fs_id']);
         }
