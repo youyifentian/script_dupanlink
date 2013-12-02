@@ -15,7 +15,7 @@
 // @grant       GM_setClipboard
 // @grant       GM_xmlhttpRequest
 // @run-at      document-end
-// @version     2.3.5
+// @version     2.3.6
 // ==/UserScript==
 
 
@@ -35,7 +35,7 @@
 
 
 
-var VERSION = '2.3.5';
+var VERSION = '2.3.6';
 var APPNAME = '百度网盘助手';
 var t = new Date().getTime();
 
@@ -54,17 +54,17 @@ var t = new Date().getTime();
         '咱能不二么,一个文件都不选你让我咋个办...', //0
         '尼玛一个文件都不选你下个毛线啊...', //1
         '你TM知道你选了100多个文件吗?想累死我啊...', //2
-        '请稍后，请求已发送，服务器正在为您准备数据...', //3
-        '<b>该页面</b>不支持文件夹和多文件的<font color="red"><b>链接复制和查看</b></font>!', //4
-        '<font color="red">请求超时...</font>', //5
+        '请求已发送，服务器正在为您准备数据...', //3
+        '<b>该页面</b>不支持文件夹和多文件的<font color="red"><b>链接复制和查看</b></font>！', //4
+        '<font color="red">请求超时了...</font>', //5
         '<font color="red">请求出错了...</font>', //6
         '<font color="red">返回数据无法直视...</font>', //7
         '请输入验证码', //8
         '验证码输入错误,请重新输入', //9
         '链接已复制到剪切板！', //10
         ''
-        ];
-    (function() {
+        ],
+    helperMenuBtns=(function() {
         var o = document.createElement('div'),panHelperBtnArr = $.merge($('.icon-download').parent('a'), $('.icon-btn-download').parent('li'));
         o.id = 'panHelperMenu';
         o.innerHTML = '<div id="panHelperMenuList" style="display:none;position:fixed;float:left;z-index:99999999;"><ul class="pull-down-menu" style="display:block;margin:0px;padding:0px;left:0px;top:0px;list-style:none;"><li><a href="javascript:;" class="fuckfirefox" type="0"><b>直接下载</b></a></li><li><a href="javascript:;" class="fuckfirefox" type="1"><b>复制链接</b></a></li><li><a href="javascript:;" class="fuckfirefox" type="2"><b>查看链接</b></a></li><li style="display:none;"><a href="' + getApiUrl('getnewversion', 1) + '" target="_blank"><img id="updateimg" title="有一份田" style="border:none;"/></a></li></ul></div>';
@@ -81,13 +81,13 @@ var t = new Date().getTime();
             btn.parentNode.insertBefore(o, btn.nextSibling);
             return o;
         }
-        var helperBtn = $('.panHelperBtn'),helperMenu = $('#panHelperMenuList'),
+        var helperBtn = $('.panHelperBtn'),helperMenu = $('#panHelperMenuList'),helperMenuBtns=helperMenu.find('a.fuckfirefox'),
         menuFun = function() {
             helperDownload($(this).attr('type') || 0);
             helperMenu.hide();
         };
         helperMenu.find('a').css('text-align', 'center');
-        helperMenu.find('a.fuckfirefox').click(menuFun);
+        helperMenuBtns.click(menuFun);
         //helperBtn.click(menuFun);
         helperBtn.mouseenter(function() {
             $(this).addClass('b-img-over');
@@ -106,8 +106,7 @@ var t = new Date().getTime();
         }).mouseleave(function() {
             $(this).hide();
         });
-        //console.log(panHelperBtnArr.length);
-        //console.log(panHelperBtnArr);
+        return helperMenuBtns;
     })();
     checkUpdate();
     function helperDownload(type) {
@@ -181,19 +180,19 @@ var t = new Date().getTime();
                 A.push(E);
             }
         }
-        B && G && $.post(disk.api.RestAPI.PCLOUD_ALBUM_DOWNLOAD_COUNTER, {
+        G && B && $.post(disk.api.RestAPI.PCLOUD_ALBUM_DOWNLOAD_COUNTER, {
             uk: F,
             album_id: G,
             fs_id: C[_].fs_id
         });
-        $.post(disk.api.RestAPI.MIS_COUNTER, {
+        !G && $.post(disk.api.RestAPI.MIS_COUNTER, {
             uk: F,
             filelist: JSON ? JSON.stringify(A) : $.stringify(A),
             sid: D,
             ctime: FileUtils.share_ctime,
             "public": FileUtils.share_public_type
         });
-        B && $.get(disk.api.RestAPI.SHARE_COUNTER, {
+        !G && B && $.get(disk.api.RestAPI.SHARE_COUNTER, {
             type: 1,
             shareid: D,
             uk: F,
@@ -206,7 +205,8 @@ var t = new Date().getTime();
             Utilities.useToast({
                 toastMode: type ? disk.ui.Toast.MODE_SUCCESS : disk.ui.Toast.MODE_CAUTION,
                 msg: msg,
-                sticky: false
+                sticky: false,
+                position: disk.ui.Panel.TOP
             });
         } catch(err) {
             if (!type) alert(msg);
@@ -224,7 +224,7 @@ var t = new Date().getTime();
         return items[0]['server_filename'];
     }
     function getDownloadInfo(type, items, vcode) {
-        if(!vcode) {showHelperDialog(10, items);}
+        if(!vcode) {showHelperDialog(helperMenuBtns.length+1, items);}
         var url = '',data = '',fidlist = '',fids = [];
         for (var i = 0; i < items.length; i++) {
             fids.push(items[i]['fs_id']);
@@ -258,7 +258,7 @@ var t = new Date().getTime();
         _.canvas = canvas;
         _.type = type;
         _.items = items;
-        if (type < 3) {
+        if (type < helperMenuBtns.length) {
             _.loading.style.display = 'none';
             if (0 === opt.errno) {
                 status=1;
@@ -299,7 +299,7 @@ var t = new Date().getTime();
     }
     function createHelperDialog() {
         var o = document.createElement('div'),
-        html = '<div class="dlg-hd b-rlv"title="有一份田"><span title="关闭"id="helperdialogclose"class="dlg-cnr dlg-cnr-r"></span><h3><a href="'+getApiUrl('getnewversion',1)+'"target="_blank"style="color:#000;">百度网盘助手' + VERSION + '</a><a href="javascript:;"title="点此复制"id="copytext"style="float:right;margin-right:240px;display:none;">点此复制</a></h3></div><div class="download-mgr-dialog-msg center"id="helperloading">加载中&hellip;</div><div id="showvcode"style="text-align:center;display:none;"><div class="dlg-bd download-verify"style="text-align:center;margin-top:25px;"><div class="verify-body">请输入验证码：<input type="text"maxlength="4"class="input-code vcode"><img width="100"height="30"src=""alt="验证码获取中"class="img-code"><a class="underline"href="javascript:;">换一张</a></div><div class="verify-error"style="text-align:left;margin-left:84px;"></div></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postvcode"><b>确定</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div><div id="showdlink"style="text-align:center;display:none;"><div class="dlg-bd download-verify"><div style="padding:5px 0px;"><b><span id="sharefilename"></span></b></div><input type="text"name="sharedlink"id="sharedlink"class="input-code"maxlength="1024"value=""style="width:500px;border:1px solid #7FADDC;padding:3px;height:24px;"></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postdownload"><b>直接下载</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div>';
+        html = '<div class="dlg-hd b-rlv"title="有一份田"><span title="关闭"id="helperdialogclose"class="dlg-cnr dlg-cnr-r"></span><h3><a href="'+getApiUrl('getnewversion',1)+'"target="_blank"style="color:#000;">百度网盘助手&nbsp;' + VERSION + '</a><a href="javascript:;"title="点此复制"id="copytext"style="float:right;margin-right:240px;display:none;">点此复制</a></h3></div><div class="download-mgr-dialog-msg center"id="helperloading"><b>数据赶来中...</b></div><div id="showvcode"style="text-align:center;display:none;"><div class="dlg-bd download-verify"style="text-align:center;margin-top:25px;"><div class="verify-body">请输入验证码：<input type="text"maxlength="4"class="input-code vcode"><img width="100"height="30"src=""alt="验证码获取中"class="img-code"><a class="underline"href="javascript:;">换一张</a></div><div class="verify-error"style="text-align:left;margin-left:84px;"></div></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postvcode"><b>确定</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div><div id="showdlink"style="text-align:center;display:none;"><div class="dlg-bd download-verify"><div style="padding:5px 0px;"><b><span id="sharefilename"></span></b></div><input type="text"name="sharedlink"id="sharedlink"class="input-code"maxlength="1024"value=""style="width:500px;border:1px solid #7FADDC;padding:3px;height:24px;"></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postdownload"><b>直接下载</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div>';
         o.className = "b-panel download-mgr-dialog helperdialog";
         o.innerHTML = html;
         o.style.width = '550px';
@@ -328,8 +328,8 @@ var t = new Date().getTime();
             if (i != max) {return vcodeinput.focus();}
             getDownloadInfo(_.type, _.items, vcode);
         },
-        postdownload = function() {
-            //iframe.src = _.dlink;
+        postdownload = function(e) {
+            if(!e){iframe.src = _.dlink;}
             dialogClose();
             myAlert(msg[3],1);
         };
@@ -417,6 +417,8 @@ function googleAnalytics() {
     loadJs(js);
 }
 googleAnalytics();
+
+
 
 
 
