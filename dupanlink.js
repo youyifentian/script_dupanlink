@@ -67,23 +67,19 @@ var t = new Date().getTime();
         ],
     helperMenuBtns=(function() {
         var panHelperBtnArr = $.merge($('.icon-download').parent('a'), $('.icon-btn-download').parent('li')),
-        o = document.createElement('div'),menuTitleArr=['直接下载','复制链接','查看链接'],html='';
-        html+='<div id="panHelperMenu" style="display:none;position:fixed;float:left;z-index:99999;"><ul class="pull-down-menu" style="display:block;margin:0px;padding:0px;left:0px;top:0px;list-style:none;">';
+        menuTitleArr=['直接下载','复制链接','查看链接'],html='';
+        html+='<div id="panHelperMenu" style="display:none;position:fixed;float:left;z-index:999999;"><ul class="pull-down-menu" style="display:block;margin:0px;padding:0px;left:0px;top:0px;list-style:none;">';
         for(var i=0;i<menuTitleArr.length;i++){
             html+='<li><a href="javascript:;" class="panHelperMenuList" type="'+i+'"><b>'+menuTitleArr[i]+'</b></a></li>';
         }
         html+='<li style="display:none;"><a href="' + getApiUrl('getnewversion', 1) + '" target="_blank"><img id="updateimg" title="有一份田" style="border:none;"/></a></li></ul></div>';
-        o.innerHTML = html;
-        document.body.appendChild(o);
+        $('<div>').html(html).appendTo(document.body);
         for (var i = 0; i < panHelperBtnArr.length; i++) {
             var item = panHelperBtnArr[i];
             createPanHelperBtn(item);
         }
         function createPanHelperBtn(btn) {
-            var o = document.createElement('div');
-            o.style.display = 'inline-block';
-            o.className = 'b-list-item haspulldown panHelperBtn';
-            o.innerHTML = '<a class="icon-btn-download" href="javascript:;" title="' + APPNAME + '">网盘助手</a>';
+            var o=$('<div class="b-list-item haspulldown panHelperBtn" style="display:inline-block;">').html('<em style="height:10px;width:10px;background:url(&quot;/res/static/images/btn_icon.gif&quot;) no-repeat scroll -45px -120px transparent; display:inline-block;position:absolute;margin-left:82px;margin-top:12px;"></em><a class="icon-btn-download" style="width:63px;padding-left:34px;padding-right:0px;" href="javascript:;" title="' + APPNAME + '">网盘助手</a>')[0];
             btn.parentNode.insertBefore(o, btn.nextSibling);
             return o;
         }
@@ -314,16 +310,12 @@ var t = new Date().getTime();
         _.focusobj.focus();
     }
     function createHelperDialog() {
-        var o = document.createElement('div'),
-        html = '<div class="dlg-hd b-rlv"title="有一份田"><span title="关闭"id="helperdialogclose"class="dlg-cnr dlg-cnr-r"></span><h3><a href="'+getApiUrl('getnewversion',1)+'"target="_blank"style="color:#000;">'+APPNAME+'&nbsp;' + VERSION + '</a><a href="javascript:;"title="点此复制"id="copytext"style="float:right;margin-right:240px;display:none;">点此复制</a></h3></div><div class="download-mgr-dialog-msg center"id="helperloading"><b>数据赶来中...</b></div><div id="showvcode"style="text-align:center;display:none;"><div class="dlg-bd download-verify"style="text-align:center;margin-top:25px;"><div class="verify-body">请输入验证码：<input type="text"maxlength="4"class="input-code vcode"><img width="100"height="30"src=""alt="验证码获取中"class="img-code"><a class="underline"href="javascript:;">换一张</a></div><div class="verify-error"style="text-align:left;margin-left:84px;"></div></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postvcode"><b>确定</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div><div id="showdlink"style="text-align:center;display:none;"><div class="dlg-bd download-verify"><div style="padding:5px 0px;"><b><span id="sharefilename"></span></b></div><input type="text"name="sharedlink"id="sharedlink"class="input-code"maxlength="1024"value=""style="width:500px;border:1px solid #7FADDC;padding:3px;height:24px;"></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postdownload"><b>直接下载</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div>';
-        o.className = "b-panel download-mgr-dialog helperdialog";
-        o.innerHTML = html;
-        o.style.width = '550px';
-        o.pane = o;
-        document.body.appendChild(o);
-        var _ = new disk.ui.Panel(o),vcodeimg = $(o).find('img')[0],vcodeinput = $(o).find('.vcode')[0],
-        sharedlink = $(o).find('#sharedlink')[0],vcodetip = $(o).find('.verify-error')[0],
-        copytext= $(o).find('#copytext')[0],postdownloadBtn=$(o).find('.postdownload')[0],
+        var html = '<div class="dlg-hd b-rlv"title="有一份田"><span title="关闭"id="helperdialogclose"class="dlg-cnr dlg-cnr-r"></span><h3><a href="'+getApiUrl('getnewversion',1)+'"target="_blank"style="color:#000;">'+APPNAME+'&nbsp;' + VERSION + '</a><a href="javascript:;"title="点此复制"id="copytext"style="float:right;margin-right:240px;display:none;">点此复制</a></h3></div><div class="download-mgr-dialog-msg center"id="helperloading"><b>数据赶来中...</b></div><div id="showvcode"style="text-align:center;display:none;"><div class="dlg-bd download-verify"style="text-align:center;margin-top:25px;"><div class="verify-body">请输入验证码：<input type="text"maxlength="4"class="input-code vcode"><img width="100"height="30"src=""alt="验证码获取中"class="img-code"><a class="underline"href="javascript:;">换一张</a></div><div class="verify-error"style="text-align:left;margin-left:84px;"></div></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postvcode"><b>确定</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div><div id="showdlink"style="text-align:center;display:none;"><div class="dlg-bd download-verify"><div style="padding:5px 0px;"><b><span id="sharefilename"></span></b></div><input type="text"name="sharedlink"id="sharedlink"class="input-code"maxlength="1024"value=""style="width:500px;border:1px solid #7FADDC;padding:3px;height:24px;"></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postdownload"><b>直接下载</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div>',
+        o=$('<div class="b-panel download-mgr-dialog helperdialog" style="width:550px;">').html(html).appendTo(document.body);
+        o[0].pane = o[0];
+        var _ = new disk.ui.Panel(o[0]),vcodeimg = o.find('img')[0],vcodeinput = o.find('.vcode')[0],
+        sharedlink = o.find('#sharedlink')[0],vcodetip = o.find('.verify-error')[0],
+        copytext= o.find('#copytext')[0],postdownloadBtn=o.find('.postdownload')[0],
         dialogClose = function() {
             vcodeinput.value = '';
             vcodetip.innerHTML = '';
@@ -346,15 +338,15 @@ var t = new Date().getTime();
             dialogClose();
             myAlert(msg[3],1);
         };
-        _._mUI.pane = o;
-        _.loading = $(o).find('#helperloading')[0];
-        _.showvcode = $(o).find('#showvcode')[0];
-        _.showdlink = $(o).find('#showdlink')[0];
+        _._mUI.pane = o[0];
+        _.loading = o.find('#helperloading')[0];
+        _.showvcode = o.find('#showvcode')[0];
+        _.showdlink = o.find('#showdlink')[0];
         _.copytext= copytext;
         _.downloadbtn=postdownloadBtn;
         _.vcodeinput = vcodeinput;
         _.sharedlink = sharedlink;
-        _.sharefilename = $(o).find('#sharefilename')[0];
+        _.sharefilename = o.find('#sharefilename')[0];
         _.vcodeimg = vcodeimg;
         _.vcodetip = vcodetip;
         _.vcodeimgsrc = '';
@@ -370,7 +362,7 @@ var t = new Date().getTime();
         vcodeinput.onkeydown = function(e) {
             if (13 == e.keyCode) {postvcode();}
         };
-        $(o).find('.postvcode').click(postvcode);
+        o.find('.postvcode').click(postvcode);
         $(postdownloadBtn).click(postdownload);
         $('#sharedlink').focusin(function() {
             this.style.boxShadow = '0 0 3px #7FADDC';
@@ -387,8 +379,8 @@ var t = new Date().getTime();
                 function() {
                     _.setGravity(disk.ui.Panel.CENTER);
         });
-        $(o).find('#helperdialogclose').click(dialogClose);
-        $(o).find('.dbtn').click(dialogClose);
+        o.find('#helperdialogclose').click(dialogClose);
+        o.find('.dbtn').click(dialogClose);
         _.setVisible(false);
         document.helperdialog = _;
         return _;
@@ -430,6 +422,8 @@ function googleAnalytics() {
     loadJs(js);
 }
 googleAnalytics();
+
+
 
 
 
