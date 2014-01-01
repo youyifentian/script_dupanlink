@@ -9,13 +9,13 @@
 // @license     GPL version 3
 // @encoding    utf-8
 // @date        26/08/2013
-// @modified    06/12/2013
+// @modified    31/12/2013
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
 // @grant       GM_setClipboard
 // @grant       GM_xmlhttpRequest
 // @run-at      document-end
-// @version     2.3.7
+// @version     2.3.8
 // ==/UserScript==
 
 
@@ -35,7 +35,7 @@
 
 
 
-var VERSION = '2.3.7';
+var VERSION = '2.3.8';
 var APPNAME = '百度网盘助手';
 var t = new Date().getTime();
 
