@@ -9,13 +9,13 @@
 // @license     GPL version 3
 // @encoding    utf-8
 // @date        26/08/2013
-// @modified    31/12/2013
+// @modified    8/1/2014
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
 // @grant       GM_setClipboard
 // @grant       GM_xmlhttpRequest
 // @run-at      document-end
-// @version     2.3.8
+// @version     2.3.9
 // ==/UserScript==
 
 
@@ -35,7 +35,7 @@
 
 
 
-var VERSION = '2.3.8';
+var VERSION = '2.3.9';
 var APPNAME = '百度网盘助手';
 var t = new Date().getTime();
 
@@ -90,8 +90,7 @@ var t = new Date().getTime();
         };
         helperMenu.find('a').css('text-align', 'center');
         helperMenuBtns.click(menuFun);
-        //helperBtn.click(menuFun);
-        helperBtn.mouseenter(function() {
+        helperBtn.click(menuFun).mouseenter(function() {
             $(this).addClass('b-img-over');
             helperMenu.children('ul').css('width', $(this).children('a').outerWidth() - 3);
             helperMenu.css('top', $(this).offset().top + $(this).height() + parseInt($(this).css('paddingTop')) - $(document).scrollTop());
@@ -203,6 +202,8 @@ var t = new Date().getTime();
             type: 1,
             shareid: D,
             uk: F,
+            sign: FileUtils.share_sign,
+            timestamp: FileUtils.share_timestamp,            
             t: new Date().getTime(),
             _: Math.random()
         });
