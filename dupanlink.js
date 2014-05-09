@@ -9,13 +9,13 @@
 // @license     GPL version 3
 // @encoding    utf-8
 // @date        26/08/2013
-// @modified    8/1/2014
+// @modified    09/05/2014
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
 // @grant       GM_setClipboard
 // @grant       GM_xmlhttpRequest
 // @run-at      document-end
-// @version     2.3.9
+// @version     2.4.0
 // ==/UserScript==
 
 
@@ -35,7 +35,7 @@
 
 
 
-var VERSION = '2.3.9';
+var VERSION = '2.4.0';
 var APPNAME = '百度网盘助手';
 var t = new Date().getTime();
 
@@ -129,8 +129,7 @@ var t = new Date().getTime();
         }else if (len > 100) {
             return myAlert(msg[2]);
         }
-        var isOneFile = 1 == len && (isOther ? true: 0 == items[0].isdir);
-        if(isOneFile) {
+        if(1 == len) {
             var url = items[0].dlink;
             if(isUrl(url)) {
                 if(2 == type) {
@@ -145,30 +144,7 @@ var t = new Date().getTime();
                 getDownloadInfo(type, items);
             }
         }else {
-            if(isOther) {
-                getDownloadInfo(type, items);
-            }else{
-                if (0 != type) {
-                    return myAlert(msg[4]);
-                }
-                var form = document.forms.pcsdownloadform,action = '',data = [],packName = getDownloadName(items);
-                for (var i = 0; i < len; i++) {
-                    var item=items[i];
-                    data.push({
-                        isdir: item.isdir,
-                        path: FileUtils.parseDirPath(item.path),
-                        size: item.size
-                    });
-                }
-                action = disk.api.RestAPI.MULTI_DOWNLOAD;
-                data = {"list": data};
-                data = JSON.stringify(data);
-                form.action = action;
-                form.elements.zipcontent.value = data;
-                form.elements.zipname.value = packName;
-                form.submit();
-                myAlert(msg[3],1);
-            }
+            getDownloadInfo(type, items);
         }
         downloadCounter(items);
     }
@@ -239,11 +215,21 @@ var t = new Date().getTime();
             fids.push(items[i]['fs_id']);
         }
         fidlist = '[' + fids.join(',') + ']';
-        url = disk.api.RestAPI.SHARE_GET_DLINK + '&uk=' + FileUtils.share_uk + '&shareid=' + FileUtils.share_id + '&timestamp=' + FileUtils.share_timestamp + '&sign=' + FileUtils.share_sign + '&fid_list=' + fidlist;
-        data = 'shareid=' + FileUtils.share_id + '&uk=' + FileUtils.share_uk + '&fid_list=' + fidlist + (vcode ? vcode: '');
+        if(isOther){
+            url = disk.api.RestAPI.SHARE_GET_DLINK + '&uk=' + FileUtils.share_uk + '&shareid=' + FileUtils.share_id + '&timestamp=' + FileUtils.share_timestamp + '&sign=' + FileUtils.share_sign + '&fid_list=' + fidlist;
+            data = 'shareid=' + FileUtils.share_id + '&uk=' + FileUtils.share_uk + '&fid_list=' + fidlist + (vcode ? vcode: '');
+        }else{
+            url = disk.api.RestAPI.DOWN_GET_DLINK;
+            data={
+                sign: FileUtils.base64Encode(FileUtils.sign2(FileUtils.sign3, FileUtils.sign1)),
+                timestamp: FileUtils.timestamp,
+                fidlist: fidlist,
+                type: (items.length >1 || items[0]['isdir']) ? "batch" : "dlink"
+            };
+        }
         httpHwnd = $.post(url, data,
                 function(o) {
-                    var dlink = o.dlink;
+                    var dlink = isUrl(o.dlink) ? o.dlink : o.dlink[0]['dlink'];
                     if (0 === o.errno) {
                         dlink = dlink + '&zipname=' + encodeURIComponent(getDownloadName(items));
                         o.dlink = dlink;
