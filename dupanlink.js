@@ -9,13 +9,13 @@
 // @license     GPL version 3
 // @encoding    utf-8
 // @date        26/08/2013
-// @modified    09/05/2014
+// @modified    22/06/2014
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
 // @grant       GM_setClipboard
 // @grant       GM_xmlhttpRequest
 // @run-at      document-end
-// @version     2.4.1
+// @version     2.4.2
 // ==/UserScript==
 
 
@@ -35,10 +35,24 @@
 
 
 
-var VERSION = '2.4.1';
+var VERSION = '2.4.2';
 var APPNAME = '百度网盘助手';
 var t = new Date().getTime();
 
+var merge = function() {
+    return Array.prototype.concat.apply([], arguments)
+};
+/**
+ *
+
+var isShareManagerMode = Page.inViewMode(Page.VIEW_SHARE_PROPERTY_OWN),
+    isOther = Page.inViewMode(Page.VIEW_PROPERTY_OTHER),downProxy = disk.util.DownloadProxy,
+    shareData = disk.util.ViewShareUtils || null,iframe = '',httpHwnd = null,index = 0,
+
+
+
+ *
+ */
 (function() {
     //window=unsafeWindow;
     //document=unsafeWindow.document;
@@ -47,9 +61,9 @@ var t = new Date().getTime();
     FileUtils = unsafeWindow.FileUtils;
     Page = unsafeWindow.Page;
     Utilities = unsafeWindow.Utilities;
-    var isShareManagerMode = Page.inViewMode(Page.VIEW_SHARE_PROPERTY_OWN),
-    isOther = Page.inViewMode(Page.VIEW_PROPERTY_OTHER),downProxy = disk.util.DownloadProxy,
-    shareData = disk.util.ViewShareUtils || null,iframe = '',httpHwnd = null,index = 0,
+    var isDuHelper=false,isShareManagerMode = false,
+    isOther = true,downProxy = Page ? disk.util.DownloadProxy : null,
+    shareData =Page ? disk.util.ViewShareUtils || null : null,iframe = '',httpHwnd = null,index = 0,
     msg = [
         '咱能不二么,一个文件都不选你让我咋个办...', //0
         '尼玛一个文件都不选你下个毛线啊...', //1
@@ -66,7 +80,7 @@ var t = new Date().getTime();
         ''
         ],
     helperMenuBtns=(function() {
-        var panHelperBtnArr = $.merge($('.icon-download').parent('a'), $('.icon-btn-download').parent('li')),
+        var panHelperBtnArr = merge($('.icon-download').parent('a').toArray(), $('.icon-btn-download').parent('li').toArray(),$('.icon-btn-download').toArray()),
         menuTitleArr=['直接下载','复制链接','查看链接'],html='';
         html+='<div id="panHelperMenu" style="display:none;position:fixed;float:left;z-index:999999;"><ul class="pull-down-menu" style="display:block;margin:0px;padding:0px;left:0px;top:0px;list-style:none;">';
         for(var i=0;i<menuTitleArr.length;i++){
@@ -79,18 +93,25 @@ var t = new Date().getTime();
             createPanHelperBtn(item);
         }
         function createPanHelperBtn(btn) {
-            var o=$('<div class="b-list-item haspulldown panHelperBtn" style="display:inline-block;">').html('<em style="height:10px;width:10px;background:url(&quot;/res/static/images/btn_icon.gif&quot;) no-repeat scroll -45px -120px transparent; display:inline-block;position:absolute;margin-left:82px;margin-top:12px;"></em><a class="icon-btn-download" style="width:63px;padding-left:34px;padding-right:0px;" href="javascript:;" title="' + APPNAME + '">网盘助手</a>')[0];
+            var o=$('<div class="b-list-item haspulldown panHelperBtn" style="display:inline-block;">').html('<a class="icon-btn-download btnr" style="width:63px;padding-left:34px;padding-right:0px;" href="javascript:;" title="' + APPNAME + '">网盘助手</a>')[0];
             btn.parentNode.insertBefore(o, btn.nextSibling);
             return o;
         }
         var helperBtn = $('.panHelperBtn'),helperMenu = $('#panHelperMenu'),helperMenuBtns=helperMenu.find('a.panHelperMenuList'),
         menuFun = function() {
+            if(!Page){
+                isDuHelper=true;
+                $('.download-btn')[0].click();
+                //isDuHelper=false;
+                return;
+            }
             helperDownload($(this).attr('type') || 0);
             helperMenu.hide();
         };
         helperMenu.find('a').css('text-align', 'center');
         helperMenuBtns.click(menuFun);
         helperBtn.click(menuFun).mouseenter(function() {
+            if(!Page){return;}
             $(this).addClass('b-img-over');
             helperMenu.children('ul').css('width', $(this).children('a').outerWidth() - 3);
             helperMenu.css('top', $(this).offset().top + $(this).height() + parseInt($(this).css('paddingTop')) - $(document).scrollTop());
@@ -108,6 +129,15 @@ var t = new Date().getTime();
             $(this).hide();
         });
         return helperMenuBtns;
+    })();
+    (function(){
+        if(Page){return;}
+        var o=require("common:widget/downloadManager/downloadManager.js");
+        o.prototype.setMode=function(i){
+            var n1=o.MODE_PRE_DOWNLOAD,n2=o.MODE_DIRECT_DOWNLOAD
+            i=isDuHelper ? (i==n1 || i==n2 ? i : n1) : i;
+            this._mMode=i;
+        };
     })();
     checkUpdate();
     function helperDownload(type) {
