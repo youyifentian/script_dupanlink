@@ -3,19 +3,19 @@
 // @author      有一份田
 // @description 显示百度网盘文件的直接链接,突破大文件需要使用电脑管家的限制
 // @namespace   http://userscripts.org/scripts/show/176807
-// @updateURL   https://userscripts.org/scripts/source/176807.meta.js
-// @downloadURL https://userscripts.org/scripts/source/176807.user.js
+// @updateURL   https://git.oschina.net/youyifentian/dupanlink/raw/master/dupanlink.js
+// @downloadURL https://git.oschina.net/youyifentian/dupanlink/raw/master/dupanlink.js
 // @icon        http://img.duoluohua.com/appimg/script_dupanlink_icon_48.png
 // @license     GPL version 3
 // @encoding    utf-8
 // @date        26/08/2013
-// @modified    22/06/2014
+// @modified    12/07/2014
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
 // @grant       GM_setClipboard
 // @grant       GM_xmlhttpRequest
 // @run-at      document-end
-// @version     2.4.2
+// @version     2.4.3
 // ==/UserScript==
 
 
@@ -35,32 +35,34 @@
 
 
 
-var VERSION = '2.4.2';
+var VERSION = '2.4.3';
 var APPNAME = '百度网盘助手';
 var t = new Date().getTime();
 
 var merge = function() {
     return Array.prototype.concat.apply([], arguments)
 };
-/**
- *
+var $ = unsafeWindow.$;
+var disk = unsafeWindow.disk;
+var FileUtils = unsafeWindow.FileUtils;
+var Page = unsafeWindow.Page;
+var Utilities = unsafeWindow.Utilities;
+var config=getConfig();
+if(config.length){
+    $.getScript(config[0],function(){
+        $.getScript(config[1],function(){
+            $.getScript(config[2],function(){
+                startInit();
+            })
+        })
+    });
+}else{
+    startInit();
+}
 
-var isShareManagerMode = Page.inViewMode(Page.VIEW_SHARE_PROPERTY_OWN),
-    isOther = Page.inViewMode(Page.VIEW_PROPERTY_OTHER),downProxy = disk.util.DownloadProxy,
-    shareData = disk.util.ViewShareUtils || null,iframe = '',httpHwnd = null,index = 0,
-
-
-
- *
- */
-(function() {
+function startInit(){
     //window=unsafeWindow;
     //document=unsafeWindow.document;
-    $ = unsafeWindow.$;
-    disk = unsafeWindow.disk;
-    FileUtils = unsafeWindow.FileUtils;
-    Page = unsafeWindow.Page;
-    Utilities = unsafeWindow.Utilities;
     var isDuHelper=false,isShareManagerMode = false,
     isOther = true,downProxy = Page ? disk.util.DownloadProxy : null,
     shareData =Page ? disk.util.ViewShareUtils || null : null,iframe = '',httpHwnd = null,index = 0,
@@ -402,7 +404,27 @@ var isShareManagerMode = Page.inViewMode(Page.VIEW_SHARE_PROPERTY_OWN),
         document.helperdialog = _;
         return _;
     }
-})();
+}
+
+
+function getConfig(){
+    var json_data='',config=[];
+    $('script').each(function(k,v){
+        var html=$(v).html();
+        var regExp=new RegExp("require.resourceMap\\((.*)\\);",'ig');
+        var execs = regExp.exec(html);
+        if(execs && !json_data.length){
+            json_data=execs[1];
+        }
+    });
+    if(json_data){
+        var o=$.parseJSON(json_data);
+        config.push(o.res['common:widget/downloadManager/downloadDirectUtil.js']['url']);
+        config.push(o.res['common:widget/downloadManager/downloadManager.js']['url']);
+        config.push(o.res['common:widget/downloadProxyPcs/downloadProxyPcs.js']['url']);
+    }
+    return config;
+}
 function isUrl(url) {
     return /^(http|https):\/\/([\w-]+(:[\w-]+)?@)?[\w-]+(\.[\w-]+)+(:[\d]+)?([#\/\?][^\s<>;"\']*)?$/.test(url);
 }
