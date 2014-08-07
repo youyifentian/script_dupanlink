@@ -9,13 +9,14 @@
 // @license     GPL version 3
 // @encoding    utf-8
 // @date        26/08/2013
-// @modified    12/07/2014
+// @modified    06/08/2014
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
+// @grant       unsafeWindow
 // @grant       GM_setClipboard
 // @grant       GM_xmlhttpRequest
 // @run-at      document-end
-// @version     2.4.3
+// @version     2.4.4
 // ==/UserScript==
 
 
@@ -35,37 +36,31 @@
 
 
 
-var VERSION = '2.4.3';
+var VERSION = '2.4.4';
 var APPNAME = '百度网盘助手';
 var t = new Date().getTime();
 
-var merge = function() {
-    return Array.prototype.concat.apply([], arguments)
-};
+
 var $ = unsafeWindow.$;
 var disk = unsafeWindow.disk;
 var FileUtils = unsafeWindow.FileUtils;
 var Page = unsafeWindow.Page;
 var Utilities = unsafeWindow.Utilities;
-var config=getConfig();
-if(config.length){
-    $.getScript(config[0],function(){
-        $.getScript(config[1],function(){
-            $.getScript(config[2],function(){
-                startInit();
-            })
-        })
-    });
-}else{
-    startInit();
-}
+var yunData = unsafeWindow.yunData;
+var require= unsafeWindow.require;
 
-function startInit(){
-    //window=unsafeWindow;
-    //document=unsafeWindow.document;
-    var isDuHelper=false,isShareManagerMode = false,
-    isOther = true,downProxy = Page ? disk.util.DownloadProxy : null,
-    shareData =Page ? disk.util.ViewShareUtils || null : null,iframe = '',httpHwnd = null,index = 0,
+(function (){
+    var isOther = location.href.indexOf('://pan.baidu.com/disk')==-1,
+    downProxy = isOther ? disk.util.DownloadProxy : null,
+    shareData = isOther ? disk.util.ViewShareUtils || null : null,
+    Canvas,Pancel,RestAPI,Toast={},errorMsg,
+    iframe = '',httpHwnd = null,index = 0,
+    btnClassArr=[
+        {'css':'icon-download','tag':'a'},
+        {'css':'icon-btn-download','tag':'li'},
+        {'css':'icon-btn-download','tag':''},
+        {'css':'download-btn','tag':''}
+    ],
     msg = [
         '咱能不二么,一个文件都不选你让我咋个办...', //0
         '尼玛一个文件都不选你下个毛线啊...', //1
@@ -80,44 +75,50 @@ function startInit(){
         '<b>链接已复制到剪切板！</b>', //10
         '未知错误，errno:',//11
         ''
-        ],
-    helperMenuBtns=(function() {
-        var panHelperBtnArr = merge($('.icon-download').parent('a').toArray(), $('.icon-btn-download').parent('li').toArray(),$('.icon-btn-download').toArray()),
-        menuTitleArr=['直接下载','复制链接','查看链接'],html='';
-        html+='<div id="panHelperMenu" style="display:none;position:fixed;float:left;z-index:999999;"><ul class="pull-down-menu" style="display:block;margin:0px;padding:0px;left:0px;top:0px;list-style:none;">';
+        ];
+    if(!isOther){
+        RestAPI=require("common:widget/restApi/restApi.js");
+        Canvas=require("common:widget/canvasPanel/canvasPanel.js");
+        Pancel=require("common:widget/panel/panel.js");
+        Toast = require("common:widget/toast/toast.js");
+        errorMsg = require("common:widget/errorMsg/errorMsg.js");
+    }
+    var helperMenuBtns=(function(){
+        var menuTitleArr=['直接下载','复制链接','查看链接'],panBtnsArr=[],html='';
+        for(var i=0;i<btnClassArr.length;i++){
+            var item=btnClassArr[i];
+            var tmpArr=item.tag!='' ? $('.'+item.css).parent(item.tag) : $('.'+item.css);
+            panBtnsArr=merge(panBtnsArr,tmpArr.toArray());
+        }
+        html+='<div id="panHelperMenu" style="display:none;position:fixed;z-index:999999;">';
+        html+='<ul class="pull-down-menu" style="display:block;margin:0px;padding:0px;left:0px;top:0px;list-style:none;">';
         for(var i=0;i<menuTitleArr.length;i++){
-            html+='<li><a href="javascript:;" class="panHelperMenuList" type="'+i+'"><b>'+menuTitleArr[i]+'</b></a></li>';
+            html+='<li><a href="javascript:;" class="panHelperMenuBtn" type="'+i+'"><b>'+menuTitleArr[i]+'</b></a></li>';
         }
-        html+='<li style="display:none;"><a href="' + getApiUrl('getnewversion', 1) + '" target="_blank"><img id="updateimg" title="有一份田" style="border:none;"/></a></li></ul></div>';
+        html+='<li style="display:none;"><a href="' + getApiUrl('getnewversion', 1) + '" target="_blank">';
+        html+='<img id="updateimg" title="有一份田" style="border:none;"/></a></li></ul></div>';
         $('<div>').html(html).appendTo(document.body);
-        for (var i = 0; i < panHelperBtnArr.length; i++) {
-            var item = panHelperBtnArr[i];
-            createPanHelperBtn(item);
+        for (var i = 0; i < panBtnsArr.length; i++) {
+            var item = panBtnsArr[i];
+            createHelperBtn(item);
         }
-        function createPanHelperBtn(btn) {
-            var o=$('<div class="b-list-item haspulldown panHelperBtn" style="display:inline-block;">').html('<a class="icon-btn-download btnr" style="width:63px;padding-left:34px;padding-right:0px;" href="javascript:;" title="' + APPNAME + '">网盘助手</a>')[0];
+        function createHelperBtn(btn) {
+            var html='<a class="icon-btn-download btn" style="width:63px;background: url(/yun-static/common/images/btn_icon.gif) -100px -416px no-repeat;" href="javascript:;" title="' + APPNAME + '">网盘助手</a>',
+            o=$('<div class="panHelperBtn" style="display:inline-block;">').html(html)[0];
             btn.parentNode.insertBefore(o, btn.nextSibling);
             return o;
         }
-        var helperBtn = $('.panHelperBtn'),helperMenu = $('#panHelperMenu'),helperMenuBtns=helperMenu.find('a.panHelperMenuList'),
+        var helperBtn = $('.panHelperBtn'),helperMenu = $('#panHelperMenu'),
         menuFun = function() {
-            if(!Page){
-                isDuHelper=true;
-                $('.download-btn')[0].click();
-                //isDuHelper=false;
-                return;
-            }
             helperDownload($(this).attr('type') || 0);
             helperMenu.hide();
         };
-        helperMenu.find('a').css('text-align', 'center');
-        helperMenuBtns.click(menuFun);
         helperBtn.click(menuFun).mouseenter(function() {
-            if(!Page){return;}
             $(this).addClass('b-img-over');
-            helperMenu.children('ul').css('width', $(this).children('a').outerWidth() - 3);
-            helperMenu.css('top', $(this).offset().top + $(this).height() + parseInt($(this).css('paddingTop')) - $(document).scrollTop());
-            helperMenu.css('left', $(this).offset().left + parseInt($(this).css('paddingLeft'))).show();
+            var o=$(this).children('a'),offset=o.offset(),w=o.outerWidth();
+            helperMenu.children('ul').css('width', w-3);
+            helperMenu.css('top', offset.top + o.height() + parseInt(o.css('paddingTop')) - $(document).scrollTop());
+            helperMenu.css('left', offset.left).show();
         }).mouseleave(function() {
             $(this).removeClass('b-img-over');
             helperMenu.hide();
@@ -130,35 +131,18 @@ function startInit(){
         }).mouseleave(function() {
             $(this).hide();
         });
-        return helperMenuBtns;
-    })();
-    (function(){
-        if(Page){return;}
-        var o=require("common:widget/downloadManager/downloadManager.js");
-        o.prototype.setMode=function(i){
-            var n1=o.MODE_PRE_DOWNLOAD,n2=o.MODE_DIRECT_DOWNLOAD
-            i=isDuHelper ? (i==n1 || i==n2 ? i : n1) : i;
-            this._mMode=i;
-        };
+        helperMenu.find('a').css('text-align', 'center');
+        return helperMenu.find('a.panHelperMenuBtn').click(menuFun).toArray();
     })();
     checkUpdate();
-    function helperDownload(type) {
-        if(!iframe) {
-            downProxy._warmupHTML();
-            iframe = $('#pcsdownloadiframe')[0]
-        }
-        var items = [];
+    function helperDownload(type){
+        iframe=createDownloadIframe();
         iframe.src = 'javascript:;';
-        if(shareData) {
-            items.push(JSON.parse(shareData.viewShareData));
-        } else {
-            items = FileUtils.getListViewCheckedItems();
-        }
-        var len = items.length;
+        var items = getListViewCheckedItems(),len = items.length;
         if(!len) {
             index = 1 == index ? 0 : 1;
             return myAlert(msg[index]);
-        }else if (len > 100) {
+        }else if (len > 99) {
             return myAlert(msg[2]);
         }
         if(1 == len) {
@@ -168,7 +152,7 @@ function startInit(){
                     showHelperDialog(type, items, {"errno": 0,"dlink": url});
                 }else if(1 == type){
                     copyText(url);
-                } else {
+                }else{
                     myAlert(msg[3],1);
                     iframe.src = url;
                 }
@@ -179,66 +163,6 @@ function startInit(){
             getDownloadInfo(type, items);
         }
         downloadCounter(items);
-    }
-    function downloadCounter(C) { //C:items,B:isOneFile
-        if (!isOther) {return;}
-        var F = FileUtils.share_uk || disk.util.ViewShareUtils.uk,
-        D = FileUtils.share_id,A = [],B = (1 == C.length && 0 == C[0].isdir),
-        G = shareData ? disk.util.ViewShareUtils.albumId: '';
-        for (var _ in C) {
-            if (C.hasOwnProperty(_)) {
-                var E = {
-                    fid: C[_].fs_id,
-                    category: C[_].category
-                };
-                A.push(E);
-            }
-        }
-        G && B && $.post(disk.api.RestAPI.PCLOUD_ALBUM_DOWNLOAD_COUNTER, {
-            uk: F,
-            album_id: G,
-            fs_id: C[_].fs_id
-        });
-        !G && $.post(disk.api.RestAPI.MIS_COUNTER, {
-            uk: F,
-            filelist: JSON.stringify(A),
-            sid: D,
-            ctime: FileUtils.share_ctime,
-            "public": FileUtils.share_public_type
-        });
-        !G && B && $.get(disk.api.RestAPI.SHARE_COUNTER, {
-            type: 1,
-            shareid: D,
-            uk: F,
-            sign: FileUtils.share_sign,
-            timestamp: FileUtils.share_timestamp,            
-            t: new Date().getTime(),
-            _: Math.random()
-        });
-    }
-    function myAlert(msg, type) {
-        try {
-            var o=Utilities.useToast({
-                toastMode: type ? disk.ui.Toast.MODE_SUCCESS : disk.ui.Toast.MODE_CAUTION,
-                msg: msg,
-                sticky: false,
-                position: disk.ui.Panel.TOP
-            });
-            $(o._mUI.pane).css({"z-index":999999});
-        } catch(err) {
-            if (!type) alert(msg);
-        }
-    }
-    function copyText(text){
-        GM_setClipboard(text);
-        myAlert(msg[10],1);
-    }
-    function getDownloadName(items) {
-        if (items.length > 1 || 1 == items[0]['isdir']) {
-            downProxy.prototype.setPackName(FileUtils.parseDirFromPath(items[0]['path']), !items[0]['isdir']);
-            return downProxy.prototype._mPackName;
-        }
-        return items[0]['server_filename'];
     }
     function getDownloadInfo(type, items, vcode) {
         if(!vcode) {showHelperDialog(helperMenuBtns.length+1, items);}
@@ -251,36 +175,43 @@ function startInit(){
             url = disk.api.RestAPI.SHARE_GET_DLINK + '&uk=' + FileUtils.share_uk + '&shareid=' + FileUtils.share_id + '&timestamp=' + FileUtils.share_timestamp + '&sign=' + FileUtils.share_sign + '&fid_list=' + fidlist;
             data = 'shareid=' + FileUtils.share_id + '&uk=' + FileUtils.share_uk + '&fid_list=' + fidlist + (vcode ? vcode: '');
         }else{
-            url = disk.api.RestAPI.DOWN_GET_DLINK;
+            url = RestAPI.DOWN_GET_DLINK;
+            if ("function" != typeof yunData.sign2) try {
+                yunData.sign2 = new Function("return " + yunData.sign2)();
+            } catch (o) {}
             data={
-                sign: FileUtils.base64Encode(FileUtils.sign2(FileUtils.sign3, FileUtils.sign1)),
-                timestamp: FileUtils.timestamp,
+                sign: base64Encode(yunData.sign2(yunData.sign3, yunData.sign1)),
+                timestamp: yunData.timestamp,
+                bdstoken: yunData.MYBDSTOKEN,
                 fidlist: fidlist,
                 type: (items.length >1 || items[0]['isdir']) ? "batch" : "dlink"
             };
         }
         httpHwnd = $.post(url, data,
-                function(o) {
-                    var dlink = typeof o.dlink =='object' ? o.dlink[0]['dlink'] : o.dlink;
-                    if (0 === o.errno) {
-                        dlink = dlink + '&zipname=' + encodeURIComponent(getDownloadName(items));
-                        o.dlink = dlink;
-                        if (shareData) {
-                            var obj = JSON.parse(shareData.viewShareData);
-                            obj.dlink = dlink;
-                            shareData.viewShareData = JSON.stringify(obj);
-                        }
-                        if (1 == items.length) {
-                            items[0]['dlink'] = dlink;
+            function(o) {
+                var dlink = typeof o.dlink =='object' ? o.dlink[0]['dlink'] : o.dlink;
+                if (0 === o.errno) {
+                    dlink = dlink + '&zipname=' + encodeURIComponent(getDownloadName(items));
+                    o.dlink = dlink;
+                    if (shareData) {
+                        var obj = JSON.parse(shareData.viewShareData);
+                        obj.dlink = dlink;
+                        shareData.viewShareData = JSON.stringify(obj);
+                    }
+                    if (1 == items.length) {
+                        items[0]['dlink'] = dlink;
+                        if(items[0]['item']){
+                            $(items[0]['item']).attr('dlink',dlink);
                         }
                     }
-                    showHelperDialog(type, items, o, vcode);
-                });
+                }
+                showHelperDialog(type, items, o, vcode);
+            });
     }
     function showHelperDialog(type, items, opt, vcode) {
-        var canvas = disk.Context.canvas || new disk.ui.Canvas(),
+        var canvas =document.canvas ? document.canvas : Canvas ? new Canvas() : new disk.ui.Canvas(),
         _ = document.helperdialog || createHelperDialog(),isVisible = _.isVisible(),status=0;
-        disk.Context.canvas = canvas;
+        document.canvas = canvas;
         _.canvas = canvas;
         _.type = type;
         _.items = items;
@@ -314,7 +245,7 @@ function startInit(){
             } else {
                 _.canvas.setVisible(false);
                 _.setVisible(false);
-                return myAlert(disk.util.shareErrorMessage[opt.errno] || (msg[11] + opt.errno));
+                return myAlert(errorMsg ? errorMsg.ErrorMessage[opt.errno] : disk.util.shareErrorMessage[opt.errno] || (msg[11] + opt.errno));
             }
         }
         _.loading.style.display = 0==status ? '' : 'none';
@@ -325,14 +256,14 @@ function startInit(){
             _.canvas.setVisible(true);
             _.setVisible(true);
         }
-        _.setGravity(disk.ui.Panel.CENTER);
+        _.setGravity(Pancel ? Pancel.CENTER : disk.ui.Panel.CENTER);
         _.focusobj.focus();
     }
     function createHelperDialog() {
         var html = '<div class="dlg-hd b-rlv"title="有一份田"><span title="关闭"id="helperdialogclose"class="dlg-cnr dlg-cnr-r"></span><h3><a href="'+getApiUrl('getnewversion',1)+'"target="_blank"style="color:#000;">'+APPNAME+'&nbsp;' + VERSION + '</a><a href="javascript:;"title="点此复制"id="copytext"style="float:right;margin-right:240px;display:none;">点此复制</a></h3></div><div class="download-mgr-dialog-msg center"id="helperloading"><b>数据赶来中...</b></div><div id="showvcode"style="text-align:center;display:none;"><div class="dlg-bd download-verify"style="text-align:center;margin-top:25px;"><div class="verify-body">请输入验证码：<input type="text"maxlength="4"class="input-code vcode"><img width="100"height="30"src=""alt="验证码获取中"class="img-code"><a class="underline"href="javascript:;">换一张</a></div><div class="verify-error"style="text-align:left;margin-left:84px;"></div></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postvcode"><b>确定</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div><div id="showdlink"style="text-align:center;display:none;"><div class="dlg-bd download-verify"><div style="padding:5px 0px;"><b><span id="sharefilename"></span></b></div><input type="text"name="sharedlink"id="sharedlink"class="input-code"maxlength="1024"value=""style="width:500px;border:1px solid #7FADDC;padding:3px;height:24px;"></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postdownload"><b>直接下载</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div>',
         o=$('<div class="b-panel download-mgr-dialog helperdialog" style="width:550px;">').html(html).appendTo(document.body);
         o[0].pane = o[0];
-        var _ = new disk.ui.Panel(o[0]),vcodeimg = o.find('img')[0],vcodeinput = o.find('.vcode')[0],
+        var _ = Pancel ? new Pancel(o[0]) : new disk.ui.Panel(o[0]),vcodeimg = o.find('img')[0],vcodeinput = o.find('.vcode')[0],
         sharedlink = o.find('#sharedlink')[0],vcodetip = o.find('.verify-error')[0],
         copytext= o.find('#copytext')[0],postdownloadBtn=o.find('.postdownload')[0],
         dialogClose = function() {
@@ -394,9 +325,8 @@ function startInit(){
         }).keydown(function(e) {
             if (13 == e.keyCode) {postdownload();}
         });
-        $(window).bind("resize",
-                function() {
-                    _.setGravity(disk.ui.Panel.CENTER);
+        $(window).bind("resize",function() {
+            _.setGravity(Pancel ? Pancel.CENTER : disk.ui.Panel.CENTER);
         });
         o.find('#helperdialogclose').click(dialogClose);
         o.find('.dbtn').click(dialogClose);
@@ -404,26 +334,113 @@ function startInit(){
         document.helperdialog = _;
         return _;
     }
-}
 
-
-function getConfig(){
-    var json_data='',config=[];
-    $('script').each(function(k,v){
-        var html=$(v).html();
-        var regExp=new RegExp("require.resourceMap\\((.*)\\);",'ig');
-        var execs = regExp.exec(html);
-        if(execs && !json_data.length){
-            json_data=execs[1];
+    function myAlert(msg, type) {
+        try {
+            var obtain;
+            if(isOther){
+                obtain = disk.ui.Toast;
+                Toast.obtain={};
+                Toast.obtain.useToast=Utilities.useToast;
+            }else{ 
+                obtain=Toast.obtain;
+            }
+            var o=Toast.obtain.useToast({
+                toastMode: type ? obtain.MODE_SUCCESS : obtain.MODE_CAUTION,
+                msg: msg,
+                sticky: false,
+                position: isOther ? disk.ui.Panel.TOP : undefined 
+            });
+            isOther && $(o._mUI.pane).css({"z-index":999999});
+        } catch(err) {
+            if (!type) {alert(msg);}
         }
-    });
-    if(json_data){
-        var o=$.parseJSON(json_data);
-        config.push(o.res['common:widget/downloadManager/downloadDirectUtil.js']['url']);
-        config.push(o.res['common:widget/downloadManager/downloadManager.js']['url']);
-        config.push(o.res['common:widget/downloadProxyPcs/downloadProxyPcs.js']['url']);
     }
-    return config;
+    function copyText(text){
+        GM_setClipboard(text);
+        myAlert(msg[10],1);
+    }
+    function createDownloadIframe(){
+        if(iframe){return iframe;}
+        var o = $('#helperdownloadiframe');
+        iframe=o.length ? o[0] : '';
+        if(!iframe) {
+            iframe = $('<div style="display:none;">').html('<iframe src="" id="helperdownloadiframe" name="helperdownloadiframe"></iframe>').appendTo(document.body).find('#helperdownloadiframe')[0];
+        }
+        return iframe;
+    }
+    function getListViewCheckedItems(){
+        var items=[];
+        if(shareData){
+            items.push(JSON.parse(shareData.viewShareData));
+        } else if(isOther) {
+            items = FileUtils.getListViewCheckedItems();
+        }else{
+            $('.item-active').each(function(i,o){
+                items.push(getListViewCheckedItemInfo(o));
+            });
+        }
+        return items;
+    }
+    function getListViewCheckedItemInfo(obj){
+        var o=$(obj),fs_id=o.attr('data-id'),category=o.attr('data-category'),
+            isdir=o.attr('data-extname')=='dir' ? 1 : 0,server_filename=o.find('span.name-text').html(),
+            dlink=o.attr('dlink') || '';
+        return {'fs_id':fs_id,'category':category,'isdir':isdir,'server_filename':server_filename,'dlink':dlink,'item':obj};
+    }
+    function getDownloadName(items) {
+        var packName=items[0]['server_filename'];
+        if (items.length > 1 || 1 == items[0]['isdir']) {
+            if(downProxy){
+                downProxy.prototype.setPackName(FileUtils.parseDirFromPath(items[0]['path']), !items[0]['isdir']);
+                packName= downProxy.prototype._mPackName;
+            }else{
+                packName='【批量下载】'+packName+'等.zip';
+            }
+        }
+        return packName;
+    }
+    function downloadCounter(C) { //C:items,B:isOneFile
+        if (!isOther) {return;}
+        var F = FileUtils.share_uk || disk.util.ViewShareUtils.uk,
+        D = FileUtils.share_id,A = [],B = (1 == C.length && 0 == C[0].isdir),
+        G = shareData ? disk.util.ViewShareUtils.albumId: '';
+        for (var _ in C) {
+            if (C.hasOwnProperty(_)) {
+                var E = {
+                    fid: C[_].fs_id,
+                    category: C[_].category
+                };
+                A.push(E);
+            }
+        }
+        G && B && $.post(disk.api.RestAPI.PCLOUD_ALBUM_DOWNLOAD_COUNTER, {
+            uk: F,
+            album_id: G,
+            fs_id: C[_].fs_id
+        });
+        !G && $.post(disk.api.RestAPI.MIS_COUNTER, {
+            uk: F,
+            filelist: JSON.stringify(A),
+            sid: D,
+            ctime: FileUtils.share_ctime,
+            "public": FileUtils.share_public_type
+        });
+        !G && B && $.get(disk.api.RestAPI.SHARE_COUNTER, {
+            type: 1,
+            shareid: D,
+            uk: F,
+            sign: FileUtils.share_sign,
+            timestamp: FileUtils.share_timestamp,            
+            t: new Date().getTime(),
+            _: Math.random()
+        });
+    }
+})();
+
+function base64Encode(a){var b,c,d,e,f,g,h="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";for(d=a.length,c=0,b="";d>c;){if(e=255&a.charCodeAt(c++),c==d){b+=h.charAt(e>>2),b+=h.charAt((3&e)<<4),b+="==";break}if(f=a.charCodeAt(c++),c==d){b+=h.charAt(e>>2),b+=h.charAt((3&e)<<4|(240&f)>>4),b+=h.charAt((15&f)<<2),b+="=";break}g=a.charCodeAt(c++),b+=h.charAt(e>>2),b+=h.charAt((3&e)<<4|(240&f)>>4),b+=h.charAt((15&f)<<2|(192&g)>>6),b+=h.charAt(63&g)}return b;}
+function merge(){
+    return Array.prototype.concat.apply([], arguments)
 }
 function isUrl(url) {
     return /^(http|https):\/\/([\w-]+(:[\w-]+)?@)?[\w-]+(\.[\w-]+)+(:[\d]+)?([#\/\?][^\s<>;"\']*)?$/.test(url);
