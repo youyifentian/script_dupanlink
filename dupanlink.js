@@ -51,7 +51,7 @@ var require= unsafeWindow.require;
 
 (function (){
     var isOther = location.href.indexOf('://pan.baidu.com/disk')==-1,
-    downProxy = isOther ? disk.util.DownloadProxy : null,
+    downProxy = isOther ? disk.util.DownloadProxy || null : null,
     shareData = isOther ? disk.util.ViewShareUtils || null : null,
     Canvas,Pancel,RestAPI,Toast={},errorMsg,
     iframe = '',httpHwnd = null,index = 0,
@@ -74,6 +74,7 @@ var require= unsafeWindow.require;
         '验证码输入错误,请重新输入', //9
         '<b>链接已复制到剪切板！</b>', //10
         '未知错误，errno:',//11
+        '<font color="red"><b>请求文件过大或过多或者链接已过期，总之该链接跪了！</b></font>',//12
         ''
         ];
     if(!isOther){
@@ -232,7 +233,7 @@ var require= unsafeWindow.require;
                 _.sharefilename.innerHTML = getDownloadName(items);
                 _.sharedlink.value = opt.dlink;
                 _.dlink = opt.dlink;
-                _.downloadbtn.href= opt.dlink;
+                //_.downloadbtn.href= opt.dlink;
                 _.focusobj = _.sharedlink;
             } else if(-19 ==opt.errno) {
                 status=2;
@@ -284,7 +285,8 @@ var require= unsafeWindow.require;
             getDownloadInfo(_.type, _.items, vcode);
         },
         postdownload = function(e) {
-            if(!e){iframe.src = _.dlink;}
+            //if(!e){iframe.src = _.dlink;}
+            iframe.src = _.dlink;
             dialogClose();
             myAlert(msg[3],1);
         };
@@ -346,7 +348,7 @@ var require= unsafeWindow.require;
                 obtain=Toast.obtain;
             }
             var o=Toast.obtain.useToast({
-                toastMode: type ? obtain.MODE_SUCCESS : obtain.MODE_CAUTION,
+                toastMode: type ? obtain.MODE_SUCCESS : obtain.MODE_FAILURE,//MODE_CAUTION
                 msg: msg,
                 sticky: false,
                 position: isOther ? disk.ui.Panel.TOP : undefined 
@@ -367,6 +369,9 @@ var require= unsafeWindow.require;
         if(!iframe) {
             iframe = $('<div style="display:none;">').html('<iframe src="" id="helperdownloadiframe" name="helperdownloadiframe"></iframe>').appendTo(document.body).find('#helperdownloadiframe')[0];
         }
+        $(iframe).load(function(){
+            myAlert(msg[12],0);
+        });
         return iframe;
     }
     function getListViewCheckedItems(){
