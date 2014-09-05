@@ -396,7 +396,11 @@ var require= unsafeWindow.require;
         return _;
     }
 
-    function myToast(msg, type, isOther) {
+    function myToast(msg, type) {
+        try{
+            unsafeWindow.myToastInjection(msg,type,isOther);
+            return;
+        }catch(e){}
         try {
             var Toast = {}, obtain,Pancel = null;
             if (isOther && disk.ui) {
