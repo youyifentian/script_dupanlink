@@ -395,7 +395,6 @@ var require= unsafeWindow.require;
         document.helperdialog = _;
         return _;
     }
-
     function myToast(msg, type) {
         try{
             unsafeWindow.myToastInjection(msg,type,isOther);
