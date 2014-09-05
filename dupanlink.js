@@ -2,20 +2,20 @@
 // @name        百度网盘助手
 // @author      有一份田
 // @description 显示百度网盘文件的直接链接,突破大文件需要使用电脑管家的限制
-// @namespace   http://userscripts.org/scripts/show/176807
-// @updateURL   https://git.oschina.net/youyifentian/dupanlink/raw/master/dupanlink.js
-// @downloadURL https://git.oschina.net/youyifentian/dupanlink/raw/master/dupanlink.js
+// @namespace   https://greasyfork.org/zh-CN/scripts/986-百度网盘助手
+// @updateURL   https://greasyfork.org/scripts/986-百度网盘助手/code/百度网盘助手.meta.js
+// @downloadURL https://greasyfork.org/scripts/986-百度网盘助手/code/百度网盘助手.user.js
 // @icon        http://img.duoluohua.com/appimg/script_dupanlink_icon_48.png
 // @license     GPL version 3
 // @encoding    utf-8
 // @date        26/08/2013
-// @modified    06/08/2014
+// @modified    05/09/2014
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
 // @grant       unsafeWindow
 // @grant       GM_setClipboard
 // @run-at      document-end
-// @version     2.4.4
+// @version     2.4.6
 // ==/UserScript==
 
 
@@ -35,7 +35,7 @@
 
 
 
-var VERSION = '2.4.4';
+var VERSION = '2.4.6';
 var APPNAME = '百度网盘助手';
 var t = new Date().getTime();
 
@@ -73,7 +73,7 @@ var require= unsafeWindow.require;
         '验证码输入错误,请重新输入', //9
         '<b>链接已复制到剪切板！</b>', //10
         '未知错误，errno:',//11
-        '<font color="red"><b>请求文件过大或过多或者链接已过期，总之该链接跪了！</b></font>',//12
+        '<font color="red"><b>尼玛竟然跪了了，难道有种，还不速速分享，O(∩_∩)O</b></font>',//12
         ''
         ];
     try{
@@ -396,13 +396,14 @@ var require= unsafeWindow.require;
 
     function myToast(msg, type, isOther) {
         try {
-            var Toast = {}, obtain;
+            var Toast = {}, obtain,Pancel = null;
             if (isOther && disk.ui) {
                 obtain = disk.ui.Toast;
                 Toast.obtain = {};
                 Toast.obtain.useToast = Utilities.useToast;
             } else {
                 Toast = require("common:widget/toast/toast.js");
+                Pancel=require("common:widget/panel/panel.js");
                 obtain = Toast.obtain;
             }
             var o = Toast.obtain.useToast({
