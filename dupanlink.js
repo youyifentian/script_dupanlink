@@ -186,9 +186,7 @@ var require= unsafeWindow.require;
                 };
             }else{
                 var context=yunData.getContext();
-                if(vcode == 'getvcode'){
-                    url = RestAPI.GET_CAPTCHA + '?prod=share';
-                }else{
+                if(typeof vcode =='object'){
                     url = '/api/sharedownload?' + 'uk=' + yunData.SHARE_UK + '&shareid=' + yunData.SHARE_ID + '&timestamp=' + yunData.TIMESTAMP + '&sign=' + yunData.SIGN + '&fid_list=' + fidlist;
                     data = 'encrypt=0&product=share&primaryid=' + yunData.SHARE_ID + '&shareid=' + yunData.SHARE_ID + '&uk=' + yunData.SHARE_UK + '&fid_list=' + fidlist+ '&extra=' + '{"sekey":"' + context.sekey + '"}';
                     data = {
@@ -200,6 +198,8 @@ var require= unsafeWindow.require;
                         uk:yunData.SHARE_UK,
                         fid_list:fidlist
                     };
+                }else{
+                    url = RestAPI.GET_CAPTCHA + '?prod=share';
                 }
             }
             if(typeof vcode =='object'){
@@ -223,7 +223,7 @@ var require= unsafeWindow.require;
             function(o) {
                 var dlink = typeof o.dlink =='object' ? o.dlink[0]['dlink'] : o.dlink;
                 if(-20 === o.errno){
-                    getDownloadInfo(type, items, 'getvcode');
+                    getDownloadInfo(type, items, typeof vcode =='object' ? 'showvcode' : 'getvcode');
                 }else if (0 === o.errno) {
                     if(o.list || dlink){
                         if(!dlink){
@@ -249,7 +249,9 @@ var require= unsafeWindow.require;
                             }catch(e){}
                         }
                     }else{
-                        o.errno = -20
+                        if(o.vcode_img && o.vcode_str){
+                            o.errno = -20;
+                        }
                     }
                     showHelperDialog(type, items, o, vcode);
                 }else{
