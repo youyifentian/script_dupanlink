@@ -53,13 +53,6 @@ var require= unsafeWindow.require;
     downProxy = null,shareData = null,
     Canvas,Pancel,RestAPI,Toast={},errorMsg,
     iframe = '',httpHwnd = null,index = 0,
-    btnClassArr=[
-        {css:'icon-download',tag:'a',id:''},
-        {css:'icon-btn-download',tag:'li',id:''},
-        {css:'icon-btn-download',tag:'',id:''},
-        {css:'download-btn',tag:'',id:''},
-        {css:'',tag:'',id:'downFileButton'}
-    ],
     msg = [
         '咱能不二么,一个文件都不选你让我咋个办...', //0
         '尼玛一个文件都不选你下个毛线啊...', //1
@@ -75,7 +68,14 @@ var require= unsafeWindow.require;
         '未知错误，errno:',//11
         '<font color="red"><b>尼玛竟然跪了了，难道有种，还不速速分享，O(∩_∩)O</b></font>',//12
         ''
-        ];
+        ],
+    btnClassArr=[
+        {css:'icon-download',tag:'a',id:''},
+        {css:'icon-btn-download',tag:'li',id:''},
+        {css:'icon-btn-download',tag:'',id:''},
+        {css:'download-btn',tag:'',id:''},
+        {css:'',tag:'',id:'downFileButton'}
+    ];
     try{
         downProxy = isOther ? disk.util.DownloadProxy || null : null;
         shareData = isOther ? disk.util.ViewShareUtils || null : null;
@@ -108,8 +108,9 @@ var require= unsafeWindow.require;
             createHelperBtn(item);
         }
         function createHelperBtn(btn) {
-            var html='<a class="icon-btn-download btn new-dbtn" style="width:63px;height:28px;background: url(/yun-static/common/images/btn_icon.gif) -100px -416px no-repeat;" href="javascript:;" title="' + APPNAME + '">网盘助手</a>',
-            o=$('<div class="panHelperBtn" style="display:inline-block;">').html(html)[0];
+            var newnode=btn.cloneNode(true),html=newnode.innerHTML;
+            $(newnode).attr('id','').attr('href','javascript:void(0)').attr('data-key','downloadhelper').attr('node-type','btn-helper').attr('onclick','').css({width:63}).html(html.replace(/[\u4E00-\u9FA5]{2,4}(\(.*\)|（.*）)?/,'网盘助手')).unbind();
+            var o=$('<div class="panHelperBtn" style="display:inline-block;">').append(newnode)[0];
             btn.parentNode.insertBefore(o, btn.nextSibling);
             return o;
         }
@@ -120,8 +121,8 @@ var require= unsafeWindow.require;
         };
         helperBtn.click(menuFun).mouseenter(function() {
             $(this).addClass('b-img-over');
-            var o=$(this).children('a'),offset=o.offset(),w=o.outerWidth();
-            helperMenu.children('ul').css('width', w-3);
+            var o=$(this).children('a'),offset=o.offset(),w=o.outerWidth()-parseInt(o.css('paddingRight'));
+            helperMenu.children('ul').css('width', w-2);
             helperMenu.css('top', offset.top + o.height() + parseInt(o.css('paddingTop')) - $(document).scrollTop());
             helperMenu.css('left', offset.left).show();
         }).mouseleave(function() {
