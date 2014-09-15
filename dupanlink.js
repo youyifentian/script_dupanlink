@@ -20,7 +20,7 @@
 // @grant       unsafeWindow
 // @grant       GM_setClipboard
 // @run-at      document-end
-// @version     2.4.6
+// @version     2.4.7
 // ==/UserScript==
 
 
@@ -40,7 +40,7 @@
 
 
 
-var VERSION = '2.4.6';
+var VERSION = '2.4.7';
 var APPNAME = '百度网盘助手';
 var t = new Date().getTime();
 
@@ -178,7 +178,10 @@ var require= unsafeWindow.require;
         downloadCounter(items);
     }
     function getDownloadInfo(type, items, vcode) {
-        if(!vcode) {showHelperDialog(helperMenuBtns.length+1, items);}
+        if(!vcode) {
+            showHelperDialog(helperMenuBtns.length+1, items);
+            vcode = {};
+        }
         var url = '',data = {},fidlist = '',fids = [];
         for (var i = 0; i < items.length; i++) {
             fids.push(items[i]['fs_id']);
@@ -231,7 +234,7 @@ var require= unsafeWindow.require;
             function(o) {
                 var dlink = typeof o.dlink =='object' ? o.dlink[0]['dlink'] : o.dlink;
                 if(-20 === o.errno){
-                    getDownloadInfo(type, items, typeof vcode =='object' ? 'showvcode' : 'getvcode');
+                    getDownloadInfo(type, items, JSON.stringify(vcode) =='{}' ? 'getvcode' : 'showvcode');
                 }else if (0 === o.errno) {
                     if(o.list || dlink){
                         if(!dlink){
@@ -259,6 +262,9 @@ var require= unsafeWindow.require;
                     }else{
                         if(o.vcode_img && o.vcode_str){
                             o.errno = -20;
+                            if(vcode == 'getvcode'){
+                                //return getDownloadInfo(type, items, getVCode('test',o.vcode_str));
+                            }
                         }
                     }
                     showHelperDialog(type, items, o, vcode);
@@ -343,9 +349,8 @@ var require= unsafeWindow.require;
         },
         postvcode = function() {
             if (httpHwnd) {httpHwnd.abort();}
-            var v = vcodeinput.value,len = v.length,max = msg.length - 1,i = max,vcode;
-            vcode = FileUtils ? '&input=' + v + '&vcode=' + _.vcodevalue : '&vcode_input=' + v + '&vcode_str=' + _.vcodevalue;
-            vcode = FileUtils ? {input:v,vcod:_.vcodevalue} : {vcode_input:v,vcode_str:_.vcodevalue};
+            var v = vcodeinput.value,len = v.length,max = msg.length - 1,i = max,
+            vcode = getVCode(v,_.vcodevalue);
             i = 0 == len ? 8 : (len < 4 ? 9 : i);
             vcodetip.innerHTML = msg[i];
             if (i != max) {return vcodeinput.focus();}
@@ -403,6 +408,9 @@ var require= unsafeWindow.require;
         _.setVisible(false);
         document.helperdialog = _;
         return _;
+    }
+    function getVCode(v,k){
+        return FileUtils ? {input:v,vcode:_.k} : {vcode_input:v,vcode_str:k};
     }
     function myToast(msg, type) {
         try{
