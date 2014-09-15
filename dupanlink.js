@@ -12,6 +12,11 @@
 // @modified    05/09/2014
 // @include     http://pan.baidu.com/*
 // @include     http://yun.baidu.com/*
+// @exclude     http://yun.baidu.com
+// @exclude     http://yun.baidu.com/#*
+// @exclude     http://pan.baidu.com/share/manage*
+// @exclude     http://pan.baidu.com/disk/recyclebin*
+// @exclude     http://yun.baidu.com/pcloud/album/info*
 // @grant       unsafeWindow
 // @grant       GM_setClipboard
 // @run-at      document-end
@@ -56,8 +61,8 @@ var require= unsafeWindow.require;
     msg = [
         '咱能不二么,一个文件都不选你让我咋个办...', //0
         '尼玛一个文件都不选你下个毛线啊...', //1
-        '你TM知道你选了<b>100</b>多个文件吗?想累死我啊...', //2
-        '<b>请求已发送</b>，服务器正在为您准备数据...', //3
+        '你TM知道你选了<b>90</b>多个文件吗?想累死我啊...', //2
+        '<b>请求已发送，数据下行中...</b>', //3
         '<b>该页面</b>不支持文件夹和多文件的<font color="red"><b>链接复制和查看</b></font>！', //4
         '<font color="red">请求超时了...</font>', //5
         '<font color="red">请求出错了...</font>', //6
@@ -66,7 +71,7 @@ var require= unsafeWindow.require;
         '验证码输入错误,请重新输入', //9
         '<b>链接已复制到剪切板！</b>', //10
         '未知错误，errno:',//11
-        '<font color="red"><b>尼玛竟然跪了了，难道有种，还不速速分享，O(∩_∩)O</b></font>',//12
+        '<font color="red"><b>尼玛竟然跪了了，不要告诉我你的水表在里面...</b></font>',//12
         ''
         ],
     btnClassArr=[
@@ -93,8 +98,9 @@ var require= unsafeWindow.require;
             var item=btnClassArr[i];
             var tmpItem=item.id!='' ? $('#'+item.id) : $('.'+item.css);
             var tmpArr=item.tag!='' ? tmpItem.parent(item.tag) : tmpItem;
-            panBtnsArr=merge(panBtnsArr,tmpArr.toArray());
+            panBtnsArr=$.merge(panBtnsArr,tmpArr.toArray());
         }
+        if(!panBtnsArr.length){return panBtnsArr;}
         html+='<div id="panHelperMenu" style="display:none;position:fixed;z-index:999999;">';
         html+='<ul class="pull-down-menu" style="display:block;margin:0px;padding:0px;left:0px;top:0px;list-style:none;">';
         for(var i=0;i<menuTitleArr.length;i++){
@@ -140,6 +146,7 @@ var require= unsafeWindow.require;
         helperMenu.find('a').css('text-align', 'center');
         return helperMenu.find('a.panHelperMenuBtn').click(menuFun).toArray();
     })();
+    if(!helperMenuBtns.length){return;}
     checkUpdate();
     function helperDownload(type){
         iframe=createDownloadIframe();
@@ -148,7 +155,7 @@ var require= unsafeWindow.require;
         if(!len) {
             index = 1 == index ? 0 : 1;
             return myToast(msg[index]);
-        }else if (len > 99) {
+        }else if (len > 90) {
             return myToast(msg[2]);
         }
         if(1 == len) {
@@ -370,6 +377,7 @@ var require= unsafeWindow.require;
         });
         $(vcodeimg).siblings('a').click(function() {
             vcodeimg.src = _.vcodeimgsrc + '&' + new Date().getTime();
+            vcodeinput.focus();
         });
         vcodeinput.onkeydown = function(e) {
             if (13 == e.keyCode) {postvcode();}
@@ -533,9 +541,6 @@ var require= unsafeWindow.require;
 })();
 
 function base64Encode(a){var b,c,d,e,f,g,h="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";for(d=a.length,c=0,b="";d>c;){if(e=255&a.charCodeAt(c++),c==d){b+=h.charAt(e>>2),b+=h.charAt((3&e)<<4),b+="==";break}if(f=a.charCodeAt(c++),c==d){b+=h.charAt(e>>2),b+=h.charAt((3&e)<<4|(240&f)>>4),b+=h.charAt((15&f)<<2),b+="=";break}g=a.charCodeAt(c++),b+=h.charAt(e>>2),b+=h.charAt((3&e)<<4|(240&f)>>4),b+=h.charAt((15&f)<<2|(192&g)>>6),b+=h.charAt(63&g)}return b;}
-function merge(){
-    return Array.prototype.concat.apply([], arguments)
-}
 function isUrl(url) {
     return /^(http|https):\/\/([\w-]+(:[\w-]+)?@)?[\w-]+(\.[\w-]+)+(:[\d]+)?([#\/\?][^\s<>;"\']*)?$/.test(url);
 }
