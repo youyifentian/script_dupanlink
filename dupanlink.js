@@ -56,7 +56,7 @@ var require= unsafeWindow.require;
 (function (){
     var isOther = location.href.indexOf('://pan.baidu.com/disk')==-1,
     downProxy = null,shareData = null,
-    Canvas,Pancel,RestAPI,Toast={},errorMsg,
+    Canvas,Pancel,RestAPI,Toast={},errorMsg,CommonService,
     iframe = '',httpHwnd = null,index = 0,
     msg = [
         '咱能不二么,一个文件都不选你让我咋个办...', //0
@@ -86,9 +86,10 @@ var require= unsafeWindow.require;
         shareData = isOther ? disk.util.ViewShareUtils || null : null;
     }catch(e){}
     if(!isOther || (isOther && !FileUtils)){
-        RestAPI=require("common:widget/restApi/restApi.js");
-        Canvas=require("common:widget/canvasPanel/canvasPanel.js");
-        Pancel=require("common:widget/panel/panel.js");
+        RestAPI = require("common:widget/restApi/restApi.js");
+        CommonService = require("common:widget/commonService/commonService.js");
+        Canvas = require("common:widget/canvasPanel/canvasPanel.js");
+        Pancel = require("common:widget/panel/panel.js");
         Toast = require("common:widget/toast/toast.js");
         errorMsg = require("common:widget/errorMsg/errorMsg.js");
     }
@@ -223,7 +224,7 @@ var require= unsafeWindow.require;
                 yunData.sign2 = new Function("return " + yunData.sign2)();
             } catch (o) {}
             data={
-                sign: base64Encode(yunData.sign2(yunData.sign3, yunData.sign1)),
+                sign: CommonService.base64Encode(yunData.sign2(yunData.sign3, yunData.sign1)),
                 timestamp: yunData.timestamp,
                 bdstoken: yunData.MYBDSTOKEN,
                 fidlist: fidlist,
@@ -548,7 +549,6 @@ var require= unsafeWindow.require;
     }
 })();
 
-function base64Encode(a){var b,c,d,e,f,g,h="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";for(d=a.length,c=0,b="";d>c;){if(e=255&a.charCodeAt(c++),c==d){b+=h.charAt(e>>2),b+=h.charAt((3&e)<<4),b+="==";break}if(f=a.charCodeAt(c++),c==d){b+=h.charAt(e>>2),b+=h.charAt((3&e)<<4|(240&f)>>4),b+=h.charAt((15&f)<<2),b+="=";break}g=a.charCodeAt(c++),b+=h.charAt(e>>2),b+=h.charAt((3&e)<<4|(240&f)>>4),b+=h.charAt((15&f)<<2|(192&g)>>6),b+=h.charAt(63&g)}return b;}
 function isUrl(url) {
     return /^(http|https):\/\/([\w-]+(:[\w-]+)?@)?[\w-]+(\.[\w-]+)+(:[\d]+)?([#\/\?][^\s<>;"\']*)?$/.test(url);
 }
