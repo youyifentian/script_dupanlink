@@ -181,7 +181,7 @@ var require= unsafeWindow.require;
     function getDownloadInfo(type, items, vcode) {
         if(!vcode) {
             showHelperDialog(helperMenuBtns.length+1, items);
-            vcode = {};
+            vcode = FileUtils ? '' : {};
         }
         var url = '',data = {},fidlist = '',fids = [];
         for (var i = 0; i < items.length; i++) {
@@ -244,22 +244,7 @@ var require= unsafeWindow.require;
                         }
                         dlink = dlink + '&zipname=' + encodeURIComponent(getDownloadName(items));
                         o.dlink = dlink;
-                        if (shareData) {
-                            var obj = JSON.parse(shareData.viewShareData);
-                            obj.dlink = dlink;
-                            shareData.viewShareData = JSON.stringify(obj);
-                        }
-                        if (1 == items.length) {
-                            items[0]['dlink'] = dlink;
-                            if(items[0]['item']){
-                                $(items[0]['item']).attr('dlink',dlink);
-                            }
-                            try{
-                                if(yunData.SHAREPAGETYPE == "single_file_page"){
-                                    yunData.FILEINFO = items;
-                                }
-                            }catch(e){}
-                        }
+                        setCheckedItemsDlink(items,dlink);
                     }else{
                         if(o.vcode_img && o.vcode_str){
                             o.errno = -20;
@@ -325,7 +310,7 @@ var require= unsafeWindow.require;
         _.loading.style.display = 0==status ? '' : 'none';
         _.showdlink.style.display = 1==status ? '' : 'none';
         _.showvcode.style.display = 2==status ? '' : 'none';
-        _.copytext.style.display = 1==status ? '' : 'none';
+        _.showbtnbar.style.display = 1==status ? '' : 'none';
         if (!isVisible) {
             _.canvas.setVisible(true);
             _.setVisible(true);
@@ -334,12 +319,12 @@ var require= unsafeWindow.require;
         _.focusobj.focus();
     }
     function createHelperDialog() {
-        var html = '<div class="dlg-hd b-rlv"title="有一份田"><span title="关闭"id="helperdialogclose"class="dlg-cnr dlg-cnr-r"></span><h3><a href="'+getApiUrl('getnewversion',1)+'"target="_blank"style="color:#000;">'+APPNAME+'&nbsp;' + VERSION + '</a><a href="javascript:;"title="点此复制"id="copytext"style="float:right;margin-right:240px;display:none;">点此复制</a></h3></div><div class="download-mgr-dialog-msg center"id="helperloading"><b>数据赶来中...</b></div><div id="showvcode"style="text-align:center;display:none;"><div class="dlg-bd download-verify"style="text-align:center;margin-top:25px;"><div class="verify-body">请输入验证码：<input type="text"maxlength="4"class="input-code vcode"><img width="100"height="30"src=""alt="验证码获取中"class="img-code"><a class="underline"href="javascript:;">换一张</a></div><div class="verify-error"style="text-align:left;margin-left:84px;"></div></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postvcode"><b>确定</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div><div id="showdlink"style="text-align:center;display:none;"><div class="dlg-bd download-verify"><div style="padding:5px 0px;"><b><span id="sharefilename"></span></b></div><input type="text"name="sharedlink"id="sharedlink"class="input-code"maxlength="1024"value=""style="width:500px;border:1px solid #7FADDC;padding:3px;height:24px;"></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postdownload"><b>直接下载</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div>',
+        var html = '<div class="dlg-hd b-rlv"title="有一份田"><span title="关闭"id="helperdialogclose"class="dlg-cnr dlg-cnr-r"></span><h3><a href="'+getApiUrl('getnewversion',1)+'"target="_blank"style="color:#000;">'+APPNAME+'&nbsp;' + VERSION + '</a><span id="showbtnbar"style="float:right;margin-right:175px;"><a href="javascript:;"title="点此复制"id="copytext">点此复制</a>（<a href="javascript:;"title="重新获取"id="redlink">重新获取</a>）</span></h3></div><div class="download-mgr-dialog-msg center"id="helperloading"><b>数据赶来中...</b></div><div id="showvcode"style="text-align:center;display:none;"><div class="dlg-bd download-verify"style="text-align:center;margin-top:25px;"><div class="verify-body">请输入验证码：<input type="text"maxlength="4"class="input-code vcode"><img width="100"height="30"src=""alt="验证码获取中"class="img-code"><a class="underline"href="javascript:;">换一张</a></div><div class="verify-error"style="text-align:left;margin-left:84px;"></div></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postvcode"><b>确定</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div><div id="showdlink"style="text-align:center;display:none;"><div class="dlg-bd download-verify"><div style="padding:5px 0px;"><b><span id="sharefilename"></span></b></div><input type="text"name="sharedlink"id="sharedlink"class="input-code"maxlength="1024"value=""style="width:500px;border:1px solid #7FADDC;padding:3px;height:24px;"></div><br><div><div class="alert-dialog-commands clearfix"><a href="javascript:;"class="sbtn okay postdownload"><b>直接下载</b></a><a href="javascript:;"class="dbtn cancel"><b>关闭</b></a></div></div></div>',
         o=$('<div class="b-panel download-mgr-dialog helperdialog" style="width:550px;">').html(html).appendTo(document.body);
         o[0].pane = o[0];
         var _ = Pancel ? new Pancel(o[0]) : new disk.ui.Panel(o[0]),vcodeimg = o.find('img')[0],vcodeinput = o.find('.vcode')[0],
         sharedlink = o.find('#sharedlink')[0],vcodetip = o.find('.verify-error')[0],
-        copytext= o.find('#copytext')[0],postdownloadBtn=o.find('.postdownload')[0],
+        showbtnbar = o.find('#showbtnbar')[0],postdownloadBtn=o.find('.postdownload')[0],
         dialogClose = function() {
             vcodeinput.value = '';
             vcodetip.innerHTML = '';
@@ -367,7 +352,7 @@ var require= unsafeWindow.require;
         _.loading = o.find('#helperloading')[0];
         _.showvcode = o.find('#showvcode')[0];
         _.showdlink = o.find('#showdlink')[0];
-        _.copytext= copytext;
+        _.showbtnbar= showbtnbar;
         _.downloadbtn=postdownloadBtn;
         _.vcodeinput = vcodeinput;
         _.sharedlink = sharedlink;
@@ -377,9 +362,14 @@ var require= unsafeWindow.require;
         _.vcodeimgsrc = '';
         _.vcodevalue = '';
         _.focusobj = sharedlink;
-        $(copytext).click(function(){
+        o.find('#copytext').click(function(){
             copyText(_.dlink);
             this.blur();
+        });
+        o.find('#redlink').click(function(){
+            setCheckedItemsDlink(_.items);
+            dialogClose();
+            helperDownload(2);
         });
         $(vcodeimg).siblings('a').click(function() {
             vcodeimg.src = _.vcodeimgsrc + '&' + new Date().getTime();
@@ -462,6 +452,25 @@ var require= unsafeWindow.require;
             myToast(msg[12],0);
         });
         return iframe;
+    }
+    function setCheckedItemsDlink(items,dlink){
+        dlink = dlink || '';
+        if (shareData) {
+            var obj = JSON.parse(shareData.viewShareData);
+            obj.dlink = dlink;
+            shareData.viewShareData = JSON.stringify(obj);
+        }
+        if (1 == items.length) {
+            items[0]['dlink'] = dlink;
+            if(items[0]['item']){
+                $(items[0]['item']).attr('dlink',dlink);
+            }
+            try{
+                if(yunData.SHAREPAGETYPE == "single_file_page"){
+                    yunData.FILEINFO = items;
+                }
+            }catch(e){}
+        }
     }
     function getListViewCheckedItems(){
         var items=[];
